@@ -1,0 +1,7 @@
+{
+  "network": "energychain_testnet",
+  "chainId": 262144,
+  "deployer": "0xA2A8B87390F8F2D188242656BFb6852914073D06",
+  "contract": "0xa969e646E93B431ffA1c6c0bB0E095EA35D330aD",
+  "deployedAt": "2026-04-01T04:47:26.385Z"
+}

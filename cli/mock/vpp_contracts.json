@@ -1,0 +1,7 @@
+[
+  "{\"contract_id\":\"VPP-2026-001\",\"vpp_name\":\"华东虚拟电厂A\",\"capacity_mw\":50,\"participants\":12,\"start_date\":\"2026-01-01\",\"end_date\":\"2026-12-31\",\"region\":\"浙江杭州\",\"settlement_type\":\"月结\"}",
+  "{\"contract_id\":\"VPP-2026-002\",\"vpp_name\":\"南方虚拟电厂B\",\"capacity_mw\":80,\"participants\":25,\"start_date\":\"2026-03-01\",\"end_date\":\"2027-02-28\",\"region\":\"广东深圳\",\"settlement_type\":\"周结\"}",
+  "{\"contract_id\":\"VPP-2026-003\",\"vpp_name\":\"北京虚拟电厂C\",\"capacity_mw\":120,\"participants\":35,\"start_date\":\"2026-02-15\",\"end_date\":\"2026-08-15\",\"region\":\"北京朝阳\",\"settlement_type\":\"月结\"}",
+  "{\"contract_id\":\"VPP-2026-004\",\"vpp_name\":\"成都虚拟电厂D\",\"capacity_mw\":30,\"participants\":8,\"start_date\":\"2026-04-01\",\"end_date\":\"2027-03-31\",\"region\":\"四川成都\",\"settlement_type\":\"季结\"}",
+  "{\"contract_id\":\"VPP-2026-005\",\"vpp_name\":\"长三角联合虚拟电厂\",\"capacity_mw\":200,\"participants\":48,\"start_date\":\"2026-01-15\",\"end_date\":\"2026-12-31\",\"region\":\"上海\",\"settlement_type\":\"月结\"}"
+]

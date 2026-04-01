@@ -1,0 +1,7 @@
+[
+  "{\"order_id\":\"CHG-20260315-0001\",\"station_id\":\"ST-HZ-001\",\"station_name\":\"杭州西湖充电站\",\"pile_no\":\"A03\",\"user_id\":\"U100286\",\"vehicle_plate\":\"浙A·D8832E\",\"start_time\":\"2026-03-15T08:30:00\",\"end_time\":\"2026-03-15T09:15:00\",\"kwh\":35.6,\"amount_cny\":28.48,\"peak_power_kw\":60}",
+  "{\"order_id\":\"CHG-20260315-0002\",\"station_id\":\"ST-SZ-012\",\"station_name\":\"深圳南山科技园充电站\",\"pile_no\":\"B07\",\"user_id\":\"U200431\",\"vehicle_plate\":\"粤B·F2291E\",\"start_time\":\"2026-03-15T10:00:00\",\"end_time\":\"2026-03-15T11:20:00\",\"kwh\":62.3,\"amount_cny\":49.84,\"peak_power_kw\":120}",
+  "{\"order_id\":\"CHG-20260315-0003\",\"station_id\":\"ST-BJ-005\",\"station_name\":\"北京国贸充电站\",\"pile_no\":\"C11\",\"user_id\":\"U300112\",\"vehicle_plate\":\"京A·N8821E\",\"start_time\":\"2026-03-15T12:45:00\",\"end_time\":\"2026-03-15T13:30:00\",\"kwh\":45.0,\"amount_cny\":40.50,\"peak_power_kw\":90}",
+  "{\"order_id\":\"CHG-20260315-0004\",\"station_id\":\"ST-HZ-003\",\"station_name\":\"杭州滨江充电站\",\"pile_no\":\"A01\",\"user_id\":\"U100532\",\"vehicle_plate\":\"浙A·K3310E\",\"start_time\":\"2026-03-15T14:00:00\",\"end_time\":\"2026-03-15T14:45:00\",\"kwh\":38.2,\"amount_cny\":30.56,\"peak_power_kw\":75}",
+  "{\"order_id\":\"CHG-20260315-0005\",\"station_id\":\"ST-SH-008\",\"station_name\":\"上海浦东张江充电站\",\"pile_no\":\"D02\",\"user_id\":\"U400873\",\"vehicle_plate\":\"沪A·M5523E\",\"start_time\":\"2026-03-15T16:30:00\",\"end_time\":\"2026-03-15T17:50:00\",\"kwh\":78.9,\"amount_cny\":63.12,\"peak_power_kw\":150}"
+]

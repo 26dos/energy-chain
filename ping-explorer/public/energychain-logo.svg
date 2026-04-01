@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00C9FF"/>
+      <stop offset="100%" style="stop-color:#92FE9D"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF"/>
+      <stop offset="100%" style="stop-color:#E0F7FA"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="95" fill="url(#bg)"/>
+  <circle cx="100" cy="100" r="85" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+  <!-- Lightning bolt -->
+  <polygon points="115,30 65,110 95,110 80,170 135,85 105,85" fill="url(#bolt)" opacity="0.95"/>
+  <!-- Chain links (two interlocking rings) -->
+  <ellipse cx="68" cy="100" rx="22" ry="14" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="4" transform="rotate(-30,68,100)"/>
+  <ellipse cx="132" cy="100" rx="22" ry="14" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="4" transform="rotate(30,132,100)"/>
+</svg>

@@ -1,0 +1,13 @@
+{
+  "name": "energy-chain-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "upload:contract": "node upload_evm_contract.js",
+    "upload:rawtx": "node upload_evm_rawtx.js"
+  },
+  "dependencies": {
+    "ethers": "^6.13.0",
+    "xlsx": "^0.18.5"
+  }
+}

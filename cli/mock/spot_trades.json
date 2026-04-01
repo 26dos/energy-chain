@@ -1,0 +1,6 @@
+[
+  "{\"trade_id\":\"SPOT-20260315-001\",\"market\":\"浙江电力现货市场\",\"seller\":\"浙能集团\",\"buyer\":\"杭州工业用户联合体\",\"volume_mwh\":120,\"price_yuan_per_mwh\":385.50,\"total_amount_yuan\":46260,\"delivery_period\":\"2026-03-15T08:00/12:00\",\"settlement_node\":\"杭州节点\"}",
+  "{\"trade_id\":\"SPOT-20260315-002\",\"market\":\"广东电力现货市场\",\"seller\":\"华能深圳\",\"buyer\":\"深圳科技园用户群\",\"volume_mwh\":85,\"price_yuan_per_mwh\":420.00,\"total_amount_yuan\":35700,\"delivery_period\":\"2026-03-15T10:00/14:00\",\"settlement_node\":\"深圳节点\"}",
+  "{\"trade_id\":\"SPOT-20260315-003\",\"market\":\"山东电力现货市场\",\"seller\":\"华电青岛\",\"buyer\":\"山东铝业集团\",\"volume_mwh\":200,\"price_yuan_per_mwh\":350.00,\"total_amount_yuan\":70000,\"delivery_period\":\"2026-03-15T00:00/24:00\",\"settlement_node\":\"青岛节点\"}",
+  "{\"trade_id\":\"SPOT-20260315-004\",\"market\":\"浙江电力现货市场\",\"seller\":\"华润电力宁波\",\"buyer\":\"宁波港务集团\",\"volume_mwh\":60,\"price_yuan_per_mwh\":395.00,\"total_amount_yuan\":23700,\"delivery_period\":\"2026-03-15T14:00/18:00\",\"settlement_node\":\"宁波节点\"}"
+]

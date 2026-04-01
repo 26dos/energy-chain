@@ -1,0 +1,7 @@
+[
+  "{\"meter_id\":\"MTR-HZ-10001\",\"reading_time\":\"2026-03-15T00:00:00\",\"active_power_kwh\":12580.35,\"reactive_power_kvarh\":2103.22,\"voltage_v\":220.5,\"current_a\":18.3,\"power_factor\":0.96,\"location\":\"杭州某工业园区A栋\"}",
+  "{\"meter_id\":\"MTR-HZ-10002\",\"reading_time\":\"2026-03-15T00:00:00\",\"active_power_kwh\":8932.10,\"reactive_power_kvarh\":1520.45,\"voltage_v\":221.2,\"current_a\":12.8,\"power_factor\":0.95,\"location\":\"杭州某工业园区B栋\"}",
+  "{\"meter_id\":\"MTR-SZ-20001\",\"reading_time\":\"2026-03-15T00:00:00\",\"active_power_kwh\":25610.88,\"reactive_power_kvarh\":4200.33,\"voltage_v\":219.8,\"current_a\":35.6,\"power_factor\":0.97,\"location\":\"深圳某商业综合体\"}",
+  "{\"meter_id\":\"MTR-BJ-30001\",\"reading_time\":\"2026-03-15T00:00:00\",\"active_power_kwh\":18200.50,\"reactive_power_kvarh\":3050.12,\"voltage_v\":220.0,\"current_a\":28.1,\"power_factor\":0.96,\"location\":\"北京某数据中心\"}",
+  "{\"meter_id\":\"MTR-CD-40001\",\"reading_time\":\"2026-03-15T00:00:00\",\"active_power_kwh\":6450.22,\"reactive_power_kvarh\":980.55,\"voltage_v\":220.8,\"current_a\":9.5,\"power_factor\":0.94,\"location\":\"成都某住宅小区配电房\"}"
+]

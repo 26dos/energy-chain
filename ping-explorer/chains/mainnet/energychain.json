@@ -1,0 +1,25 @@
+{
+  "chain_name": "energychain",
+  "api": [
+    { "provider": "local", "address": "http://localhost:1317" }
+  ],
+  "rpc": [
+    { "provider": "local", "address": "http://localhost:26657" }
+  ],
+  "sdk_version": "0.54.0",
+  "coin_type": "60",
+  "min_tx_fee": "0",
+  "addr_prefix": "cosmos",
+  "logo": "/energychain-logo.svg",
+  "assets": [
+    {
+      "base": "uecy",
+      "symbol": "ECY",
+      "exponent": "18",
+      "coingecko_id": "",
+      "logo": "/energychain-logo.svg"
+    }
+  ],
+  "ping_rpc": "http://localhost:26657",
+  "ping_rest": "http://localhost:1317"
+}

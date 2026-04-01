@@ -1,0 +1,23 @@
+{
+  "name": "energy-chain-contracts",
+  "version": "1.0.0",
+  "description": "Energy Chain — 通用能源数据存证与溯源合约",
+  "license": "MIT",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:testnet": "hardhat run scripts/deploy.ts --network energychain_testnet",
+    "clean": "hardhat clean",
+    "typechain": "hardhat typechain"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "dotenv": "^16.4.0",
+    "hardhat": "^2.22.0",
+    "typescript": "^5.4.0",
+    "ts-node": "^10.9.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0"
+  }
+}

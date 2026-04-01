@@ -1,0 +1,54 @@
+# Go
+chain/build/
+chain/vendor/
+
+# Node.js
+node_modules/
+.yarn/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build artifacts
+*.exe
+*.test
+*.out
+*.prof
+chain/energychaind
+
+# Hardhat
+contracts/cache/
+contracts/artifacts/
+contracts/typechain-types/
+
+# Deployment state (keep deployment.json tracked for reference)
+# contracts/deployment.json
+
+# Chain data
+.energychaind/
+chain/data/
+
+# Blockscout explorer (1.4GB+ source, clone separately)
+blockscout-explorer/
+
+# Ping explorer build output
+ping-explorer/dist/
+ping-explorer/auto-imports.d.ts
+ping-explorer/components.d.ts
+
+# Env files with secrets
+.env
+.env.local
+.env.*.local
+
+# Lock files (regenerate via npm install)
+package-lock.json
+yarn.lock
+
+# OS
+Thumbs.db

@@ -1,0 +1,6 @@
+[
+  "{\"package_id\":\"PKG-2026-ZJ-001\",\"name\":\"浙江工商业峰谷套餐A\",\"provider\":\"浙江售电公司\",\"peak_price\":1.05,\"valley_price\":0.38,\"flat_price\":0.68,\"user_count\":320,\"total_volume_mwh\":5800,\"valid_from\":\"2026-01-01\",\"valid_to\":\"2026-06-30\"}",
+  "{\"package_id\":\"PKG-2026-GD-001\",\"name\":\"广东大工业套餐\",\"provider\":\"南方能源售电\",\"peak_price\":1.12,\"valley_price\":0.35,\"flat_price\":0.72,\"user_count\":150,\"total_volume_mwh\":12000,\"valid_from\":\"2026-03-01\",\"valid_to\":\"2026-12-31\"}",
+  "{\"package_id\":\"PKG-2026-SH-001\",\"name\":\"上海商业楼宇绿电套餐\",\"provider\":\"上海绿能售电\",\"peak_price\":0.98,\"valley_price\":0.42,\"flat_price\":0.65,\"user_count\":85,\"total_volume_mwh\":3200,\"valid_from\":\"2026-01-01\",\"valid_to\":\"2026-12-31\"}",
+  "{\"package_id\":\"PKG-2026-BJ-001\",\"name\":\"北京数据中心专属套餐\",\"provider\":\"首都电力售电\",\"peak_price\":1.08,\"valley_price\":0.40,\"flat_price\":0.70,\"user_count\":28,\"total_volume_mwh\":18500,\"valid_from\":\"2026-02-01\",\"valid_to\":\"2027-01-31\"}"
+]
