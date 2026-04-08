@@ -101,67 +101,228 @@
 
 ## 3. 环境准备
 
+> **国内网络说明**: 以下所有步骤均使用国内镜像源，无需翻墙即可完成安装。
+
+### 3.0 国内镜像源配置 (首先执行)
+
+```bash
+# ================================================================
+#  第一步: 配置 APT 国内源 (阿里云/清华)
+# ================================================================
+
+# 备份原有源
+sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+
+# 获取 Ubuntu 版本号
+UBUNTU_CODENAME=$(lsb_release -cs)
+echo "当前 Ubuntu 版本: ${UBUNTU_CODENAME}"
+
+# 使用阿里云镜像 (也可换成清华: mirrors.tuna.tsinghua.edu.cn)
+sudo bash -c "cat > /etc/apt/sources.list" << APTEOF
+deb http://mirrors.aliyun.com/ubuntu/ ${UBUNTU_CODENAME} main restricted universe multiverse
+deb http://mirrors.aliyun.com/ubuntu/ ${UBUNTU_CODENAME}-updates main restricted universe multiverse
+deb http://mirrors.aliyun.com/ubuntu/ ${UBUNTU_CODENAME}-backports main restricted universe multiverse
+deb http://mirrors.aliyun.com/ubuntu/ ${UBUNTU_CODENAME}-security main restricted universe multiverse
+APTEOF
+
+sudo apt update
+
+# ================================================================
+#  配置 Git — 加速 GitHub clone
+# ================================================================
+
+# 方案 A: 使用 ghproxy 加速 (推荐, 免费)
+git config --global url."https://mirror.ghproxy.com/https://github.com/".insteadOf "https://github.com/"
+
+# 方案 B: 如果 ghproxy 不可用, 试试 gitclone.com
+# git config --global url."https://gitclone.com/github.com/".insteadOf "https://github.com/"
+
+# 方案 C: 取消加速 (恢复直连)
+# git config --global --unset url."https://mirror.ghproxy.com/https://github.com/".insteadOf
+```
+
 ### 3.1 Ubuntu 基础环境
 
 ```bash
-# 系统更新
+# 系统更新 (已配置阿里云源, 速度很快)
 sudo apt update && sudo apt upgrade -y
 
 # 安装基础工具
 sudo apt install -y build-essential git curl wget jq make gcc g++ \
   lz4 unzip software-properties-common ca-certificates gnupg
 
-# 安装 Go 1.25+
+# ================================================================
+#  安装 Go 1.25+ (使用中科大/Go官方中国镜像)
+# ================================================================
 GO_VERSION="1.25.2"
-wget "https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz"
+
+# 使用 Go 官方中国镜像 (golang.google.cn) 或中科大镜像
+# 方案 A: Go 官方中国站 (推荐)
+wget "https://golang.google.cn/dl/go${GO_VERSION}.linux-amd64.tar.gz"
+
+# 方案 B: 如果方案A也失败, 使用中科大镜像
+# wget "https://mirrors.ustc.edu.cn/golang/go${GO_VERSION}.linux-amd64.tar.gz"
+
+# 方案 C: 南京大学镜像
+# wget "https://mirrors.nju.edu.cn/golang/go${GO_VERSION}.linux-amd64.tar.gz"
+
 sudo rm -rf /usr/local/go
 sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
 rm "go${GO_VERSION}.linux-amd64.tar.gz"
 
-# 配置 Go 环境
+# 配置 Go 环境 + 国内模块代理
 cat >> ~/.bashrc << 'GOEOF'
 export GOROOT=/usr/local/go
 export GOPATH=$HOME/go
 export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
+
+# Go 模块代理 (七牛云, 国内最快)
+export GOPROXY=https://goproxy.cn,direct
+# 备选: 阿里云 export GOPROXY=https://mirrors.aliyun.com/goproxy/,direct
+
+# 私有仓库不走代理 (如果有私有 Go 模块)
+export GONOSUMCHECK=*
+export GOPRIVATE=github.com/your-org/*
 GOEOF
 source ~/.bashrc
 go version
+go env GOPROXY  # 验证代理配置
 
-# 安装 Node.js 20 (用于合约/DEX)
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
+# ================================================================
+#  安装 Node.js 20 (使用国内源)
+# ================================================================
+
+# 方案 A: 使用 npmmirror (原淘宝源) 安装 Node.js
+curl -fsSL https://registry.npmmirror.com/-/binary/node/v20.18.0/node-v20.18.0-linux-x64.tar.xz -o node.tar.xz
+sudo mkdir -p /usr/local/node
+sudo tar -xJf node.tar.xz -C /usr/local/node --strip-components=1
+rm node.tar.xz
+sudo ln -sf /usr/local/node/bin/node /usr/local/bin/node
+sudo ln -sf /usr/local/node/bin/npm /usr/local/bin/npm
+sudo ln -sf /usr/local/node/bin/npx /usr/local/bin/npx
+
+# 方案 B: 使用 nodesource (如果网络允许)
+# curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+# sudo apt install -y nodejs
+
 node -v && npm -v
 
-# 安装 Docker & Docker Compose (用于 Blockscout)
+# 配置 npm 国内镜像 (npmmirror, 原淘宝源)
+npm config set registry https://registry.npmmirror.com
+npm config get registry  # 验证
+
+# ================================================================
+#  安装 Docker & Docker Compose (使用阿里云镜像)
+# ================================================================
+
+# 添加 Docker GPG key (阿里云源)
 sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+
+# 添加 Docker 仓库 (阿里云)
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://mirrors.aliyun.com/docker-ce/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
 sudo apt update
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 sudo usermod -aG docker $USER
 newgrp docker
 
-# 安装 Nginx
+# 配置 Docker 国内镜像加速 (拉取 image 加速)
+sudo mkdir -p /etc/docker
+sudo bash -c 'cat > /etc/docker/daemon.json' << 'DOCKEREOF'
+{
+  "registry-mirrors": [
+    "https://docker.m.daocloud.io",
+    "https://dockerhub.icu",
+    "https://docker.nastool.de"
+  ],
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "100m",
+    "max-file": "3"
+  }
+}
+DOCKEREOF
+
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+
+# 验证 Docker 镜像加速
+docker info | grep -A 5 "Registry Mirrors"
+
+# ================================================================
+#  安装 Nginx
+# ================================================================
 sudo apt install -y nginx
 
 # 创建工作目录
 mkdir -p ~/energychain && cd ~/energychain
 ```
 
+### 3.1.1 镜像源速度测试 (可选)
+
+```bash
+# 测试各个 Go 镜像的连通性
+echo "=== 测试 Go 下载源 ==="
+for url in \
+  "https://golang.google.cn/dl/" \
+  "https://mirrors.ustc.edu.cn/golang/" \
+  "https://mirrors.nju.edu.cn/golang/" \
+  "https://mirrors.aliyun.com/golang/"; do
+  echo -n "${url} -> "
+  curl -o /dev/null -s -w "HTTP %{http_code}, %{time_total}s\n" --connect-timeout 5 "$url" || echo "FAILED"
+done
+
+echo ""
+echo "=== 测试 Go 模块代理 ==="
+for url in \
+  "https://goproxy.cn" \
+  "https://mirrors.aliyun.com/goproxy/" \
+  "https://goproxy.io"; do
+  echo -n "${url} -> "
+  curl -o /dev/null -s -w "HTTP %{http_code}, %{time_total}s\n" --connect-timeout 5 "$url" || echo "FAILED"
+done
+
+echo ""
+echo "=== 测试 npm 源 ==="
+npm ping --registry https://registry.npmmirror.com
+
+echo ""
+echo "=== 测试 Docker 镜像 ==="
+docker pull hello-world && docker rmi hello-world
+```
+
 ### 3.2 Mac 基础环境
 
 ```bash
-# Homebrew (如未安装)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+# Homebrew (如未安装, 使用国内镜像)
+# 方案 A: 清华镜像 (推荐)
+/bin/bash -c "$(curl -fsSL https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/install/HEAD/install.sh)"
+
+# 方案 B: 官方源 (如果网络通畅)
+# /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# 配置 Homebrew 国内源 (清华)
+echo 'export HOMEBREW_API_DOMAIN="https://mirrors.tuna.tsinghua.edu.cn/homebrew-bottles/api"' >> ~/.zshrc
+echo 'export HOMEBREW_BOTTLE_DOMAIN="https://mirrors.tuna.tsinghua.edu.cn/homebrew-bottles"' >> ~/.zshrc
+echo 'export HOMEBREW_BREW_GIT_REMOTE="https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/brew.git"' >> ~/.zshrc
+echo 'export HOMEBREW_CORE_GIT_REMOTE="https://mirrors.tuna.tsinghua.edu.cn/git/homebrew/homebrew-core.git"' >> ~/.zshrc
+source ~/.zshrc
 
 # 安装 Go 1.25+
 brew install go@1.25
 echo 'export PATH="/opt/homebrew/opt/go@1.25/bin:$PATH"' >> ~/.zshrc
+
+# Go 模块代理
+echo 'export GOPROXY=https://goproxy.cn,direct' >> ~/.zshrc
 source ~/.zshrc
 go version
 
 # 安装 jq
 brew install jq
+
+# npm 国内镜像
+npm config set registry https://registry.npmmirror.com
 
 # 创建工作目录
 mkdir -p ~/energychain && cd ~/energychain
