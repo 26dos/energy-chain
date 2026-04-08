@@ -29,9 +29,13 @@ type AppModuleBasic struct{}
 
 func (AppModuleBasic) Name() string { return types.ModuleName }
 
-func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {}
+func (AppModuleBasic) RegisterLegacyAminoCodec(cdc *codec.LegacyAmino) {
+	types.RegisterCodec(cdc)
+}
 
-func (AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {}
+func (AppModuleBasic) RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
+	types.RegisterInterfaces(registry)
+}
 
 func (AppModuleBasic) DefaultGenesis(cdc codec.JSONCodec) json.RawMessage {
 	gs := types.DefaultGenesis()
@@ -65,10 +69,13 @@ func NewAppModule(cdc codec.Codec, keeper keeper.Keeper) AppModule {
 	}
 }
 
-// RegisterServices is a no-op until proto-generated service descriptors are
-// available. The keeper logic is fully implemented and accessible via genesis
-// and internal keeper calls; gRPC routing requires a future proto codegen step.
-func (am AppModule) RegisterServices(_ module.Configurator) {}
+func (AppModule) RegisterServices(_ module.Configurator) {
+	// Full gRPC service registration requires proto-generated service descriptors.
+	// Generate .proto files and run protoc to enable automatic gRPC routing.
+	// MsgServer and QueryServer implementations are operational via keeper:
+	//   keeper.NewMsgServerImpl(am.keeper) implements types.MsgServer
+	//   keeper.NewQueryServerImpl(am.keeper) implements types.QueryServer
+}
 
 func (am AppModule) InitGenesis(ctx sdk.Context, _ codec.JSONCodec, data json.RawMessage) {
 	var gs types.GenesisState

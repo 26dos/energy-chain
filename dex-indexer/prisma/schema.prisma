@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Token {
+  address    String   @id
+  name       String
+  symbol     String
+  decimals   Int
+  totalSupply String  @default("0")
+  priceUsd   Float    @default(0)
+  change24h  Float    @default(0)
+  volume24h  Float    @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  pairsAsToken0 Pair[] @relation("token0")
+  pairsAsToken1 Pair[] @relation("token1")
+}
+
+model Pair {
+  address     String   @id
+  token0Addr  String
+  token1Addr  String
+  reserve0    String   @default("0")
+  reserve1    String   @default("0")
+  tvlUsd      Float    @default(0)
+  volume24h   Float    @default(0)
+  txCount     Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  blockNumber Int      @default(0)
+
+  token0 Token  @relation("token0", fields: [token0Addr], references: [address])
+  token1 Token  @relation("token1", fields: [token1Addr], references: [address])
+  swaps  Swap[]
+  mints  Mint[]
+  burns  Burn[]
+  ohlcv  OHLCV[]
+}
+
+model Swap {
+  id          String   @id @default(cuid())
+  pairAddr    String
+  txHash      String
+  sender      String
+  to          String
+  amount0In   String
+  amount1In   String
+  amount0Out  String
+  amount1Out  String
+  amountUsd   Float    @default(0)
+  timestamp   DateTime
+  blockNumber Int
+
+  pair Pair @relation(fields: [pairAddr], references: [address])
+
+  @@index([pairAddr, timestamp])
+  @@index([sender])
+  @@index([timestamp])
+}
+
+model Mint {
+  id          String   @id @default(cuid())
+  pairAddr    String
+  txHash      String
+  sender      String
+  amount0     String
+  amount1     String
+  amountUsd   Float    @default(0)
+  timestamp   DateTime
+  blockNumber Int
+
+  pair Pair @relation(fields: [pairAddr], references: [address])
+
+  @@index([pairAddr, timestamp])
+}
+
+model Burn {
+  id          String   @id @default(cuid())
+  pairAddr    String
+  txHash      String
+  sender      String
+  amount0     String
+  amount1     String
+  amountUsd   Float    @default(0)
+  timestamp   DateTime
+  blockNumber Int
+
+  pair Pair @relation(fields: [pairAddr], references: [address])
+
+  @@index([pairAddr, timestamp])
+}
+
+model OHLCV {
+  id        String   @id @default(cuid())
+  pairAddr  String
+  interval  String   // "1m", "5m", "15m", "1h", "4h", "1d"
+  open      Float
+  high      Float
+  low       Float
+  close     Float
+  volume    Float
+  timestamp DateTime
+
+  pair Pair @relation(fields: [pairAddr], references: [address])
+
+  @@unique([pairAddr, interval, timestamp])
+  @@index([pairAddr, interval, timestamp])
+}
+
+model IndexerState {
+  key   String @id
+  value String
+}

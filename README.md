@@ -7,8 +7,9 @@
 | 层级 | 技术 |
 |------|------|
 | 共识 | CometBFT (PoS + BFT)，2 秒出块，即时最终性 |
-| 链框架 | Cosmos SDK v0.50 |
+| 链框架 | Cosmos SDK v0.54 + Cosmos EVM |
 | EVM | Ethermint，完全兼容以太坊工具链 |
+| DEX | Uniswap V2 Fork (Solidity)，React DApp |
 | 跨链 | IBC (Inter-Blockchain Communication) |
 | 密码学 | secp256k1 + Keccak-256 (非国密) |
 | 合约 | Solidity ^0.8.20，Hardhat + OpenZeppelin |
@@ -16,47 +17,49 @@
 
 ## 链参数
 
-- **Chain ID**: `energychain_9001-1` (EIP-155: 9001)
+- **Chain ID**: `energychain_9001-1`（EVM: `262144` / `0x40000`）
 - **Denom**: `uecy` (1 ECY = 10^18 uecy)
+- **Bech32 Prefix**: `energy`
 - **出块时间**: 2 秒
 - **验证者上限**: 100（初始 4 个）
 - **解绑期**: 14 天
 - **通胀**: 2% - 8%（目标质押率 67%）
-- **Gas**: min-gas-prices = 0.025 uecy，支持 EIP-1559
+- **Gas**: min-gas-prices = 10 Gwei（10000000000 uecy），支持 EIP-1559
 
 ## 工程结构
 
 ```
 energy-chain/
 ├── docs/                              # 需求、架构与选型文档
-│   ├── 能源公链需求与架构文档.md
-│   ├── 公链基础实现与架构.md
-│   └── 公链选型分析.md
-│
-├── chain/                             # Cosmos SDK + Ethermint 链 (Go)
-│   ├── app/                           # 链主程序
-│   ├── cmd/energychaind/main.go       # 节点 CLI 入口
-│   ├── x/                            # 自定义 Cosmos 模块
-│   │   ├── identity/                  # 身份与准入 (KYC/白名单/角色)
-│   │   ├── oracle/                    # 预言机 (电价/碳价/负荷)
-│   │   ├── audit/                     # 审计日志与监管查询
-│   │   └── energy/                    # 能源数据标准格式与批量存证
-│   ├── config/                        # 链配置与创世模板
-│   └── scripts/                       # 测试网脚本
-│
+├── chain/                             # Cosmos SDK + EVM 链 (Go)
+│   ├── app.go                         # 链主程序（NewEnergyChainApp）
+│   ├── cmd/energychaind/              # 节点 CLI 入口
+│   ├── x/                             # 自定义 Cosmos 模块
+│   │   ├── energy/                    # 能源数据存证 + MerkleRoot 校验
+│   │   ├── oracle/                    # 预言机（时间戳范围校验）
+│   │   ├── identity/                  # 身份与准入（params-based admin）
+│   │   └── audit/                     # 审计日志（AllowedAuditors 白名单）
+│   ├── config/                        # 链配置（Bech32=energy, .energychaind）
+│   └── scripts/                       # 节点启动脚本
 ├── contracts/                         # Solidity 智能合约 (Hardhat)
 │   ├── contracts/
-│   │   └── EnergyDataAttestation.sol  # 通用数据存证与溯源合约
-│   ├── test/                          # 合约测试 (12 个测试用例)
-│   ├── scripts/deploy.ts              # 部署脚本
-│   ├── hardhat.config.ts
-│   └── package.json
-│
-└── cli/                               # 数据存证 CLI 工具
-    ├── bin/energy-cli.js              # CLI 入口
-    ├── lib/                           # 核心库 (ABI、客户端)
-    ├── examples/                      # 示例数据
-    └── package.json
+│   │   ├── EnergyDataAttestation.sol  # 数据存证合约
+│   │   └── dex/                       # DEX 合约（Uniswap V2 Fork）
+│   │       ├── WECY.sol               # Wrapped ECY
+│   │       ├── UniswapV2Factory.sol   # 交易对工厂
+│   │       ├── UniswapV2Router02.sol  # 路由合约
+│   │       └── UniswapV2Pair.sol      # 交易对合约
+│   ├── test/                          # 合约测试（23 个用例）
+│   └── scripts/                       # 部署脚本
+├── dex-frontend/                      # DEX 前端 DApp (React + Vite)
+│   └── src/
+│       ├── components/                # Swap, Charts, etc.
+│       ├── pages/                     # Swap, Pool, Charts, Tokens, Portfolio, Transfer, Farm
+│       └── config/                    # 合约地址、Token 配置
+├── dex-indexer/                       # DEX 索引服务 (Node.js + PostgreSQL)
+├── cli/                               # 数据存证 CLI 工具
+├── ping-explorer/                     # Cosmos 侧浏览器
+└── blockscout-explorer/               # EVM 侧浏览器 (Docker)
 ```
 
 ## 数据溯源原理
@@ -116,6 +119,31 @@ energy-chain/
 - **不可篡改**: 区块链共识机制保证，一旦写入就无法修改或删除
 - **隐私保护**: 链上只存哈希，原始数据不上链，敏感信息不泄露
 
+## DEX (去中心化交易所)
+
+基于 Uniswap V2 分叉构建的全功能 DEX，支持：
+
+- **代币交易**: ECY ↔ ERC-20、ERC-20 ↔ ERC-20
+- **流动性管理**: 添加/移除流动性
+- **代币创建**: 通过 ERC20TokenFactory 一键创建自定义代币
+- **K线图表**: 实时价格走势与交易历史
+- **资产管理**: 查看持仓、交易记录、代币转账
+
+### 快速启动 DEX
+
+```bash
+# 1. 启动链
+cd chain && bash scripts/local_node.sh -y
+
+# 2. 部署 DEX 合约
+cd contracts && npm install
+PRIVATE_KEY=<your_key> npx hardhat run scripts/deploy_dex.ts --network energychain_testnet
+
+# 3. 启动前端
+cd dex-frontend && npm install && npm run dev
+# 访问 http://localhost:5174
+```
+
 ## 快速开始
 
 ### 前置依赖
@@ -155,6 +183,8 @@ npm install
 npx hardhat compile
 npx hardhat test
 ```
+
+共 **23** 个用例，覆盖 `EnergyDataAttestation` 与 DEX（`contracts/test/DEX.test.ts` 等）。
 
 ### 4. 部署合约到测试网
 
@@ -258,7 +288,7 @@ node bin/energy-cli.js info
 
 - 网络名称: Energy Chain Testnet
 - RPC URL: http://localhost:8545
-- Chain ID: 9001
+- Chain ID: 262144 (0x40000)
 - 代币符号: ECY
 
 ## 自定义 Cosmos 模块
@@ -303,6 +333,7 @@ node bin/energy-cli.js info
 
 ## 文档
 
+- [部署与测试指南](docs/部署与测试指南.md)
 - [能源公链需求与架构文档](docs/能源公链需求与架构文档.md)
 - [公链基础实现与架构](docs/公链基础实现与架构.md)
 - [公链选型分析](docs/公链选型分析.md)

@@ -7,7 +7,7 @@ import (
 )
 
 func MustGetDefaultNodeHome() string {
-	defaultNodeHome, err := clienthelpers.GetNodeHomeDirectory(".evmd")
+	defaultNodeHome, err := clienthelpers.GetNodeHomeDirectory(".energychaind")
 	if err != nil {
 		panic(err)
 	}
@@ -32,7 +32,7 @@ func InitAppConfig(denom string, evmChainID uint64) (string, interface{}) {
 	//   own app.toml to override, or use this default value.
 	//
 	// In this example application, we set the min gas prices to 0.
-	srvCfg.MinGasPrices = "0" + denom
+	srvCfg.MinGasPrices = "10000000000" + denom
 
 	evmCfg := cosmosevmserverconfig.DefaultEVMConfig()
 	evmCfg.EVMChainID = evmChainID

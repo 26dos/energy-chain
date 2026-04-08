@@ -13,16 +13,33 @@ type msgServer struct {
 	keeper Keeper
 }
 
+var _ types.MsgServer = &msgServer{}
+
 func NewMsgServerImpl(keeper Keeper) *msgServer {
 	return &msgServer{keeper: keeper}
 }
 
-func (m *msgServer) SubmitData(goCtx context.Context, msg *types.MsgSubmitData) error {
+func (m *msgServer) SubmitData(goCtx context.Context, msg *types.MsgSubmitData) (*types.MsgSubmitDataResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	if !m.keeper.IsAuthorizedOracle(ctx, msg.Submitter, msg.Category) {
-		return fmt.Errorf("address %s is not an authorized oracle for category %s",
+		return nil, fmt.Errorf("address %s is not an authorized oracle for category %s",
 			msg.Submitter, msg.Category)
+	}
+
+	blockTime := ctx.BlockTime().Unix()
+	params := m.keeper.GetParams(ctx)
+	maxDrift := params.DataMaxAge
+	if maxDrift <= 0 {
+		maxDrift = 3600
+	}
+	if msg.Timestamp > blockTime+maxDrift {
+		return nil, fmt.Errorf("timestamp %d is too far in the future (block time %d, max drift %ds)",
+			msg.Timestamp, blockTime, maxDrift)
+	}
+	if msg.Timestamp < blockTime-maxDrift {
+		return nil, fmt.Errorf("timestamp %d is too far in the past (block time %d, max drift %ds)",
+			msg.Timestamp, blockTime, maxDrift)
 	}
 
 	data := types.OracleData{
@@ -43,14 +60,14 @@ func (m *msgServer) SubmitData(goCtx context.Context, msg *types.MsgSubmitData) 
 		sdk.NewAttribute("timestamp", fmt.Sprintf("%d", msg.Timestamp)),
 	))
 
-	return nil
+	return &types.MsgSubmitDataResponse{}, nil
 }
 
-func (m *msgServer) AddOracle(goCtx context.Context, msg *types.MsgAddOracle) error {
+func (m *msgServer) AddOracle(goCtx context.Context, msg *types.MsgAddOracle) (*types.MsgAddOracleResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	if msg.Authority != m.keeper.GetAuthority() {
-		return fmt.Errorf("unauthorized: expected %s, got %s", m.keeper.GetAuthority(), msg.Authority)
+		return nil, fmt.Errorf("unauthorized: expected %s, got %s", m.keeper.GetAuthority(), msg.Authority)
 	}
 
 	oracle := types.OracleInfo{
@@ -68,18 +85,18 @@ func (m *msgServer) AddOracle(goCtx context.Context, msg *types.MsgAddOracle) er
 		sdk.NewAttribute("name", msg.Name),
 	))
 
-	return nil
+	return &types.MsgAddOracleResponse{}, nil
 }
 
-func (m *msgServer) RemoveOracle(goCtx context.Context, msg *types.MsgRemoveOracle) error {
+func (m *msgServer) RemoveOracle(goCtx context.Context, msg *types.MsgRemoveOracle) (*types.MsgRemoveOracleResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	if msg.Authority != m.keeper.GetAuthority() {
-		return fmt.Errorf("unauthorized: expected %s, got %s", m.keeper.GetAuthority(), msg.Authority)
+		return nil, fmt.Errorf("unauthorized: expected %s, got %s", m.keeper.GetAuthority(), msg.Authority)
 	}
 
 	if _, found := m.keeper.GetOracle(ctx, msg.OracleAddress); !found {
-		return fmt.Errorf("oracle not found: %s", msg.OracleAddress)
+		return nil, fmt.Errorf("oracle not found: %s", msg.OracleAddress)
 	}
 
 	m.keeper.RemoveOracle(ctx, msg.OracleAddress)
@@ -89,5 +106,5 @@ func (m *msgServer) RemoveOracle(goCtx context.Context, msg *types.MsgRemoveOrac
 		sdk.NewAttribute("address", msg.OracleAddress),
 	))
 
-	return nil
+	return &types.MsgRemoveOracleResponse{}, nil
 }

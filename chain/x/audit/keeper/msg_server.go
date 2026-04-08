@@ -20,8 +20,30 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 
 var _ types.MsgServer = msgServer{}
 
+func (m msgServer) isAllowedAuditor(ctx sdk.Context, address string) bool {
+	params := m.GetParams(ctx)
+	if len(params.AllowedAuditors) == 0 {
+		return true
+	}
+	for _, allowed := range params.AllowedAuditors {
+		if allowed == address {
+			return true
+		}
+	}
+	return false
+}
+
 func (m msgServer) RecordAudit(goCtx context.Context, msg *types.MsgRecordAudit) (*types.MsgRecordAuditResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if !m.isAllowedAuditor(ctx, msg.Creator) {
+		return nil, fmt.Errorf("address %s is not an allowed auditor", msg.Creator)
+	}
+
+	params := m.GetParams(ctx)
+	if params.MaxDataSize > 0 && len(msg.Data) > params.MaxDataSize {
+		return nil, fmt.Errorf("data size %d exceeds maximum %d", len(msg.Data), params.MaxDataSize)
+	}
 
 	id := m.GetNextID(ctx)
 

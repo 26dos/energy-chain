@@ -9,80 +9,48 @@ import (
 	"energychain/x/oracle/types"
 )
 
-type QueryServer struct {
+type queryServer struct {
 	keeper Keeper
 }
 
-func NewQueryServerImpl(keeper Keeper) *QueryServer {
-	return &QueryServer{keeper: keeper}
+func NewQueryServerImpl(keeper Keeper) types.QueryServer {
+	return &queryServer{keeper: keeper}
 }
 
-// ---------------------------------------------------------------------------
-// QueryLatestData – get the most recent data for a category
-// ---------------------------------------------------------------------------
+var _ types.QueryServer = &queryServer{}
 
-type QueryLatestDataRequest struct {
-	Category string `json:"category"`
-}
-
-type QueryLatestDataResponse struct {
-	Data  types.OracleData `json:"data"`
-	Found bool             `json:"found"`
-}
-
-func (q *QueryServer) QueryLatestData(goCtx context.Context, req *QueryLatestDataRequest) (*QueryLatestDataResponse, error) {
-	if req == nil {
-		return nil, fmt.Errorf("empty request")
-	}
+func (q *queryServer) GetLatestData(goCtx context.Context, req *types.QueryLatestDataRequest) (*types.QueryLatestDataResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	data, found := q.keeper.GetLatestData(ctx, req.Category)
-	return &QueryLatestDataResponse{Data: data, Found: found}, nil
-}
-
-// ---------------------------------------------------------------------------
-// QueryDataHistory – get data within a time range for a category
-// ---------------------------------------------------------------------------
-
-type QueryDataHistoryRequest struct {
-	Category string `json:"category"`
-	From     int64  `json:"from"`
-	To       int64  `json:"to"`
-}
-
-type QueryDataHistoryResponse struct {
-	Data []types.OracleData `json:"data"`
-}
-
-func (q *QueryServer) QueryDataHistory(goCtx context.Context, req *QueryDataHistoryRequest) (*QueryDataHistoryResponse, error) {
-	if req == nil {
-		return nil, fmt.Errorf("empty request")
+	if !found {
+		return nil, fmt.Errorf("no data found for category: %s", req.Category)
 	}
-	if req.From > req.To {
-		return nil, fmt.Errorf("from timestamp must be <= to timestamp")
-	}
+	return &types.QueryLatestDataResponse{Data: data}, nil
+}
+
+func (q *queryServer) GetDataHistory(goCtx context.Context, req *types.QueryDataHistoryRequest) (*types.QueryDataHistoryResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	data := q.keeper.GetDataHistory(ctx, req.Category, req.From, req.To)
-	if data == nil {
-		data = []types.OracleData{}
+	data := q.keeper.GetDataHistory(ctx, req.Category, req.FromTime, req.ToTime)
+	return &types.QueryDataHistoryResponse{Data: data}, nil
+}
+
+func (q *queryServer) GetOracle(goCtx context.Context, req *types.QueryOracleRequest) (*types.QueryOracleResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	oracle, found := q.keeper.GetOracle(ctx, req.Address)
+	if !found {
+		return nil, fmt.Errorf("oracle not found: %s", req.Address)
 	}
-	return &QueryDataHistoryResponse{Data: data}, nil
+	return &types.QueryOracleResponse{Oracle: oracle}, nil
 }
 
-// ---------------------------------------------------------------------------
-// QueryOracles – list all registered oracle nodes
-// ---------------------------------------------------------------------------
-
-type QueryOraclesRequest struct{}
-
-type QueryOraclesResponse struct {
-	Oracles []types.OracleInfo `json:"oracles"`
-}
-
-func (q *QueryServer) QueryOracles(goCtx context.Context, req *QueryOraclesRequest) (*QueryOraclesResponse, error) {
+func (q *queryServer) GetAllOracles(goCtx context.Context, _ *types.QueryAllOraclesRequest) (*types.QueryAllOraclesResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	oracles := q.keeper.GetAllOracles(ctx)
-	if oracles == nil {
-		oracles = []types.OracleInfo{}
-	}
-	return &QueryOraclesResponse{Oracles: oracles}, nil
+	return &types.QueryAllOraclesResponse{Oracles: oracles}, nil
+}
+
+func (q *queryServer) GetParams(goCtx context.Context, _ *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	params := q.keeper.GetParams(ctx)
+	return &types.QueryParamsResponse{Params: params}, nil
 }

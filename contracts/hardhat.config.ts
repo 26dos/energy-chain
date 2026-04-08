@@ -37,7 +37,7 @@ const config: HardhatUserConfig = {
       chainId: 262144,
       accounts: process.env.PRIVATE_KEY
         ? [process.env.PRIVATE_KEY]
-        : ["0x8be1e5311e4cb31002c5c84cea459b5e598592f1d00c796e3de2880d55fe9990"],
+        : (() => { console.warn("WARNING: PRIVATE_KEY env not set for testnet"); return []; })(),
     },
     energychain_mainnet: {
       url: process.env.MAINNET_RPC_URL || "https://rpc.energychain.io",

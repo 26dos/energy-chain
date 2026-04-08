@@ -19,10 +19,21 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 
 var _ types.MsgServer = msgServer{}
 
+func (m msgServer) isAdmin(ctx sdk.Context, address string) bool {
+	if address == m.GetAuthority() {
+		return true
+	}
+	params := m.GetParams(ctx)
+	if params.AdminAddress != "" && params.AdminAddress == address {
+		return true
+	}
+	return false
+}
+
 func (m msgServer) RegisterIdentity(goCtx context.Context, msg *types.MsgRegisterIdentity) (*types.MsgRegisterIdentityResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	if msg.Creator != m.GetAuthority() {
+	if !m.isAdmin(ctx, msg.Creator) {
 		return nil, sdkerrors.ErrUnauthorized.Wrap("only the admin can register identities")
 	}
 
@@ -60,7 +71,7 @@ func (m msgServer) UpdateIdentity(goCtx context.Context, msg *types.MsgUpdateIde
 		return nil, sdkerrors.ErrNotFound.Wrapf("identity not found: %s", msg.Address)
 	}
 
-	isAdmin := msg.Creator == m.GetAuthority()
+	isAdmin := m.isAdmin(ctx, msg.Creator)
 	isOwner := msg.Creator == msg.Address
 	if !isAdmin && !isOwner {
 		return nil, sdkerrors.ErrUnauthorized.Wrap("only admin or identity owner can update")
@@ -88,7 +99,7 @@ func (m msgServer) UpdateIdentity(goCtx context.Context, msg *types.MsgUpdateIde
 func (m msgServer) RevokeIdentity(goCtx context.Context, msg *types.MsgRevokeIdentity) (*types.MsgRevokeIdentityResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
-	if msg.Creator != m.GetAuthority() {
+	if !m.isAdmin(ctx, msg.Creator) {
 		return nil, sdkerrors.ErrUnauthorized.Wrap("only the admin can revoke identities")
 	}
 

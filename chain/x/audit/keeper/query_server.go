@@ -2,61 +2,49 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
 
 	"energychain/x/audit/types"
 )
 
 type queryServer struct {
-	Keeper
+	keeper Keeper
 }
 
 func NewQueryServerImpl(keeper Keeper) types.QueryServer {
-	return &queryServer{Keeper: keeper}
+	return &queryServer{keeper: keeper}
 }
 
-var _ types.QueryServer = queryServer{}
+var _ types.QueryServer = &queryServer{}
 
-func (q queryServer) QueryAuditLog(goCtx context.Context, req *types.QueryAuditLogRequest) (*types.QueryAuditLogResponse, error) {
-	if req == nil {
-		return nil, sdkerrors.ErrInvalidRequest.Wrap("empty request")
-	}
-
+func (q *queryServer) QueryAuditLog(goCtx context.Context, req *types.QueryAuditLogRequest) (*types.QueryAuditLogResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-
-	log, found := q.GetAuditLog(ctx, req.ID)
+	log, found := q.keeper.GetAuditLog(ctx, req.ID)
 	if !found {
-		return nil, sdkerrors.ErrNotFound.Wrapf("audit log not found: %d", req.ID)
+		return nil, fmt.Errorf("audit log not found: %d", req.ID)
 	}
-
 	return &types.QueryAuditLogResponse{Log: log}, nil
 }
 
-func (q queryServer) QueryAuditLogs(goCtx context.Context, req *types.QueryAuditLogsRequest) (*types.QueryAuditLogsResponse, error) {
-	if req == nil {
-		return nil, sdkerrors.ErrInvalidRequest.Wrap("empty request")
-	}
-
+func (q *queryServer) QueryAuditLogs(goCtx context.Context, req *types.QueryAuditLogsRequest) (*types.QueryAuditLogsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 
 	var logs []types.AuditLog
-
-	switch {
-	case req.Actor != "":
-		logs = q.GetAuditLogsByActor(ctx, req.Actor)
-	case req.EventType != "":
-		logs = q.GetAuditLogsByType(ctx, req.EventType)
-	case req.FromTimestamp > 0 || req.ToTimestamp > 0:
+	if req.Actor != "" {
+		logs = q.keeper.GetAuditLogsByActor(ctx, req.Actor)
+	} else if req.EventType != "" {
+		logs = q.keeper.GetAuditLogsByType(ctx, req.EventType)
+	} else if req.FromTimestamp > 0 || req.ToTimestamp > 0 {
 		from := req.FromTimestamp
 		to := req.ToTimestamp
 		if to == 0 {
 			to = ctx.BlockTime().Unix()
 		}
-		logs = q.GetAuditLogsByTimeRange(ctx, from, to)
-	default:
-		logs = q.GetAllLogs(ctx)
+		logs = q.keeper.GetAuditLogsByTimeRange(ctx, from, to)
+	} else {
+		logs = q.keeper.GetAllLogs(ctx)
 	}
 
 	return &types.QueryAuditLogsResponse{Logs: logs}, nil

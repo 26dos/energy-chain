@@ -84,7 +84,7 @@ func (a appCreator) newApp(
 		baseapp.SetIAVLCacheSize(cast.ToInt(appOpts.Get(server.FlagIAVLCacheSize))),
 	}
 
-	return evmd.NewExampleApp(
+	return evmd.NewEnergyChainApp(
 		logger,
 		db,
 		traceStore,
@@ -125,7 +125,7 @@ func (a appCreator) appExport(
 		loadLatest = true
 	}
 
-	evmApp = evmd.NewExampleApp(
+	evmApp = evmd.NewEnergyChainApp(
 		logger,
 		db,
 		traceStore,

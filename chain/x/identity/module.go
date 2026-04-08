@@ -75,8 +75,9 @@ func NewAppModule(cdc codec.Codec, keeper keeper.Keeper) AppModule {
 func (am AppModule) Name() string { return types.ModuleName }
 
 // RegisterServices registers module gRPC services with the configurator.
-// Full gRPC routing requires proto-generated service descriptors; add .proto
-// files and regenerate to enable automatic message and query routing.
+// Full gRPC service registration requires proto-generated service descriptors.
+// MsgServer: keeper.NewMsgServerImpl(am.keeper) implements types.MsgServer
+// QueryServer: keeper.NewQueryServerImpl(am.keeper) implements types.QueryServer
 func (am AppModule) RegisterServices(_ module.Configurator) {}
 
 func (am AppModule) InitGenesis(ctx sdk.Context, _ codec.JSONCodec, data json.RawMessage) {
@@ -84,6 +85,8 @@ func (am AppModule) InitGenesis(ctx sdk.Context, _ codec.JSONCodec, data json.Ra
 	if err := json.Unmarshal(data, &gs); err != nil {
 		panic(fmt.Sprintf("failed to unmarshal %s genesis: %v", types.ModuleName, err))
 	}
+
+	am.keeper.SetParams(ctx, gs.Params)
 
 	for _, identity := range gs.Identities {
 		am.keeper.SetIdentity(ctx, identity)

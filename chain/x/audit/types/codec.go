@@ -14,9 +14,7 @@ func RegisterCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgRecordAudit{}, "audit/MsgRecordAudit", nil)
 }
 
-func RegisterInterfaces(_ cdctypes.InterfaceRegistry) {
-	// Hand-written types lack proto type URLs; skip RegisterImplementations.
-}
+func RegisterInterfaces(_ cdctypes.InterfaceRegistry) {}
 
 func init() {
 	RegisterCodec(amino)

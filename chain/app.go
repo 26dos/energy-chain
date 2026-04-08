@@ -76,7 +76,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/server/api"
 	"github.com/cosmos/cosmos-sdk/server/config"
 	servertypes "github.com/cosmos/cosmos-sdk/server/types"
-	testdata_pulsar "github.com/cosmos/cosmos-sdk/testutil/testdata/testpb"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkmempool "github.com/cosmos/cosmos-sdk/types/mempool"
 	"github.com/cosmos/cosmos-sdk/types/module"
@@ -218,8 +217,8 @@ type EVMD struct {
 	configurator module.Configurator
 }
 
-// NewExampleApp returns a reference to an initialized EVMD.
-func NewExampleApp(
+// NewEnergyChainApp returns a reference to an initialized EVMD.
+func NewEnergyChainApp(
 	logger log.Logger,
 	db dbm.DB,
 	traceStore io.Writer,
@@ -285,8 +284,8 @@ func NewExampleApp(
 		func(ms storetypes.MultiStore) string { return sdk.DefaultBondDenom },
 	))
 
-	// disable block gas meter
-	bApp.SetDisableBlockGasMeter(true)
+	// enable block gas meter for production safety
+	bApp.SetDisableBlockGasMeter(false)
 
 	// load state streaming if enabled
 	if err := bApp.RegisterStreamingServices(appOpts, keys); err != nil {
@@ -745,9 +744,6 @@ func NewExampleApp(
 	}
 	reflectionv1.RegisterReflectionServiceServer(app.GRPCQueryRouter(), reflectionSvc)
 
-	// add test gRPC service for testing gRPC queries in isolation
-	testdata_pulsar.RegisterQueryServer(app.GRPCQueryRouter(), testdata_pulsar.QueryImpl{})
-
 	// create the simulation manager and define the order of the modules for deterministic simulations
 	//
 	// NOTE: this is not required apps that don't use the simulator for fuzz testing
@@ -947,10 +943,11 @@ func (app *EVMD) DefaultGenesis() map[string]json.RawMessage {
 	evmGenState := NewEVMGenesisState()
 	genesis[evmtypes.ModuleName] = app.appCodec.MustMarshalJSON(evmGenState)
 
-	// NOTE: for the example chain implementation we are also adding a default token pair,
-	// which is the base denomination of the chain (i.e. the WEVMOS contract)
 	erc20GenState := NewErc20GenesisState()
 	genesis[erc20types.ModuleName] = app.appCodec.MustMarshalJSON(erc20GenState)
+
+	feeMarketGenState := NewFeeMarketGenesisState()
+	genesis[feemarkettypes.ModuleName] = app.appCodec.MustMarshalJSON(feeMarketGenState)
 
 	return genesis
 }

@@ -55,6 +55,12 @@ func (msg MsgSubmitEnergyData) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{signer}
 }
 
+func (*MsgSubmitEnergyData) Route() string { return RouterKey }
+func (*MsgSubmitEnergyData) Type() string  { return "submit_energy_data" }
+func (msg *MsgSubmitEnergyData) GetSignBytes() []byte {
+	return sdk.MustSortJSON(amino.MustMarshalJSON(msg))
+}
+
 // ---------------------------------------------------------------------------
 // MsgBatchSubmit
 // ---------------------------------------------------------------------------
@@ -111,4 +117,10 @@ func (msg MsgBatchSubmit) ValidateBasic() error {
 func (msg MsgBatchSubmit) GetSigners() []sdk.AccAddress {
 	signer, _ := sdk.AccAddressFromBech32(msg.Submitter)
 	return []sdk.AccAddress{signer}
+}
+
+func (*MsgBatchSubmit) Route() string { return RouterKey }
+func (*MsgBatchSubmit) Type() string  { return "batch_submit" }
+func (msg *MsgBatchSubmit) GetSignBytes() []byte {
+	return sdk.MustSortJSON(amino.MustMarshalJSON(msg))
 }

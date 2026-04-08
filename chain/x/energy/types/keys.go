@@ -1,5 +1,9 @@
 package types
 
+const (
+	RouterKey = ModuleName
+)
+
 var (
 	EnergyDataKeyPrefix      = []byte{0x01} // prefix for energy data by ID
 	EnergyByCategoryPrefix   = []byte{0x02} // prefix for index: category -> ID

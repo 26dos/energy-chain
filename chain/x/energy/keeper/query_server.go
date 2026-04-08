@@ -9,119 +9,48 @@ import (
 	"energychain/x/energy/types"
 )
 
-type QueryServer struct {
+type queryServer struct {
 	keeper Keeper
 }
 
-func NewQueryServerImpl(keeper Keeper) *QueryServer {
-	return &QueryServer{keeper: keeper}
+func NewQueryServerImpl(keeper Keeper) types.QueryServer {
+	return &queryServer{keeper: keeper}
 }
 
-// ---------------------------------------------------------------------------
-// QueryEnergyData – look up a single record by ID
-// ---------------------------------------------------------------------------
+var _ types.QueryServer = &queryServer{}
 
-type QueryEnergyDataRequest struct {
-	ID string `json:"id"`
-}
-
-type QueryEnergyDataResponse struct {
-	Data  types.EnergyData `json:"data"`
-	Found bool             `json:"found"`
-}
-
-func (q *QueryServer) QueryEnergyData(goCtx context.Context, req *QueryEnergyDataRequest) (*QueryEnergyDataResponse, error) {
-	if req == nil {
-		return nil, fmt.Errorf("empty request")
-	}
+func (q *queryServer) GetEnergyData(goCtx context.Context, req *types.QueryEnergyDataRequest) (*types.QueryEnergyDataResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	data, found := q.keeper.GetEnergyData(ctx, req.ID)
-	return &QueryEnergyDataResponse{Data: data, Found: found}, nil
-}
-
-// ---------------------------------------------------------------------------
-// QueryEnergyDataByCategory – list records by user-defined category string
-// ---------------------------------------------------------------------------
-
-type QueryEnergyDataByCategoryRequest struct {
-	Category string `json:"category"`
-	FromTime int64  `json:"from_time,omitempty"`
-	ToTime   int64  `json:"to_time,omitempty"`
-}
-
-type QueryEnergyDataByCategoryResponse struct {
-	Records []types.EnergyData `json:"records"`
-}
-
-func (q *QueryServer) QueryEnergyDataByCategory(goCtx context.Context, req *QueryEnergyDataByCategoryRequest) (*QueryEnergyDataByCategoryResponse, error) {
-	if req == nil {
-		return nil, fmt.Errorf("empty request")
+	if !found {
+		return nil, fmt.Errorf("energy data not found: %s", req.ID)
 	}
+	return &types.QueryEnergyDataResponse{Data: data}, nil
+}
+
+func (q *queryServer) GetEnergyDataByCategory(goCtx context.Context, req *types.QueryEnergyDataByCategoryRequest) (*types.QueryEnergyDataByCategoryResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	records := q.keeper.GetEnergyDataByCategory(ctx, req.Category)
-
-	if req.FromTime > 0 || req.ToTime > 0 {
-		var filtered []types.EnergyData
-		for _, r := range records {
-			if req.FromTime > 0 && r.Timestamp < req.FromTime {
-				continue
-			}
-			if req.ToTime > 0 && r.Timestamp > req.ToTime {
-				continue
-			}
-			filtered = append(filtered, r)
-		}
-		records = filtered
-	}
-
-	if records == nil {
-		records = []types.EnergyData{}
-	}
-	return &QueryEnergyDataByCategoryResponse{Records: records}, nil
+	data := q.keeper.GetEnergyDataByCategory(ctx, req.Category)
+	return &types.QueryEnergyDataByCategoryResponse{Data: data}, nil
 }
 
-// ---------------------------------------------------------------------------
-// QueryEnergyDataBySubmitter – list records by submitter address
-// ---------------------------------------------------------------------------
-
-type QueryEnergyDataBySubmitterRequest struct {
-	Submitter string `json:"submitter"`
-}
-
-type QueryEnergyDataBySubmitterResponse struct {
-	Records []types.EnergyData `json:"records"`
-}
-
-func (q *QueryServer) QueryEnergyDataBySubmitter(goCtx context.Context, req *QueryEnergyDataBySubmitterRequest) (*QueryEnergyDataBySubmitterResponse, error) {
-	if req == nil {
-		return nil, fmt.Errorf("empty request")
-	}
+func (q *queryServer) GetEnergyDataBySubmitter(goCtx context.Context, req *types.QueryEnergyDataBySubmitterRequest) (*types.QueryEnergyDataBySubmitterResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
-	records := q.keeper.GetEnergyDataBySubmitter(ctx, req.Submitter)
-	if records == nil {
-		records = []types.EnergyData{}
-	}
-	return &QueryEnergyDataBySubmitterResponse{Records: records}, nil
+	data := q.keeper.GetEnergyDataBySubmitter(ctx, req.Submitter)
+	return &types.QueryEnergyDataBySubmitterResponse{Data: data}, nil
 }
 
-// ---------------------------------------------------------------------------
-// QueryBatch – look up a batch submission by ID
-// ---------------------------------------------------------------------------
-
-type QueryBatchRequest struct {
-	ID string `json:"id"`
-}
-
-type QueryBatchResponse struct {
-	Batch types.BatchSubmission `json:"batch"`
-	Found bool                  `json:"found"`
-}
-
-func (q *QueryServer) QueryBatch(goCtx context.Context, req *QueryBatchRequest) (*QueryBatchResponse, error) {
-	if req == nil {
-		return nil, fmt.Errorf("empty request")
-	}
+func (q *queryServer) GetBatch(goCtx context.Context, req *types.QueryBatchRequest) (*types.QueryBatchResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	batch, found := q.keeper.GetBatch(ctx, req.ID)
-	return &QueryBatchResponse{Batch: batch, Found: found}, nil
+	if !found {
+		return nil, fmt.Errorf("batch not found: %s", req.ID)
+	}
+	return &types.QueryBatchResponse{Batch: batch}, nil
+}
+
+func (q *queryServer) GetParams(goCtx context.Context, _ *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	params := q.keeper.GetParams(ctx)
+	return &types.QueryParamsResponse{Params: params}, nil
 }

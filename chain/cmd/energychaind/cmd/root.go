@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	evmd "energychain"
 	"errors"
 	"io"
 	"os"
@@ -12,12 +13,12 @@ import (
 	cmtcfg "github.com/cometbft/cometbft/config"
 	cmtcli "github.com/cometbft/cometbft/libs/cli"
 
+	"energychain/config"
+
 	dbm "github.com/cosmos/cosmos-db"
 	cosmosevmcmd "github.com/cosmos/evm/client"
 	evmdebug "github.com/cosmos/evm/client/debug"
 	"github.com/cosmos/evm/crypto/hd"
-	"energychain"
-	"energychain/config"
 	cosmosevmserver "github.com/cosmos/evm/server"
 	srvflags "github.com/cosmos/evm/server/flags"
 	"github.com/cosmos/evm/utils"
@@ -55,7 +56,7 @@ func NewRootCmd() *cobra.Command {
 	// we "pre"-instantiate the application for getting the injected/configured encoding configuration
 	// and the CLI options for the modules
 	// add keyring to autocli opts
-	tempApp := evmd.NewExampleApp(
+	tempApp := evmd.NewEnergyChainApp(
 		log.NewNopLogger(),
 		dbm.NewMemDB(),
 		nil,
@@ -174,7 +175,6 @@ func initRootCmd(rootCmd *cobra.Command, evmApp *evmd.EVMD) {
 		confixcmd.ConfigCommand(),
 		pruning.Cmd(sdkAppCreator, defaultNodeHome),
 		snapshot.Cmd(sdkAppCreator),
-
 	)
 
 	// add Cosmos EVM' flavored TM commands to start server, etc.
@@ -307,7 +307,7 @@ func newApp(
 		baseapp.SetChainID(chainID),
 	}
 
-	return evmd.NewExampleApp(
+	return evmd.NewEnergyChainApp(
 		logger, db, traceStore, true,
 		appOpts,
 		baseappOptions...,
@@ -350,13 +350,13 @@ func appExport(
 	}
 
 	if height != -1 {
-		exampleApp = evmd.NewExampleApp(logger, db, traceStore, false, appOpts, baseapp.SetChainID(chainID))
+		exampleApp = evmd.NewEnergyChainApp(logger, db, traceStore, false, appOpts, baseapp.SetChainID(chainID))
 
 		if err := exampleApp.LoadHeight(height); err != nil {
 			return servertypes.ExportedApp{}, err
 		}
 	} else {
-		exampleApp = evmd.NewExampleApp(logger, db, traceStore, true, appOpts, baseapp.SetChainID(chainID)) // TODO:VLAD - Remove // TODO:VLAD - Remove appoptions and evmchainid
+		exampleApp = evmd.NewEnergyChainApp(logger, db, traceStore, true, appOpts, baseapp.SetChainID(chainID)) // TODO:VLAD - Remove // TODO:VLAD - Remove appoptions and evmchainid
 	}
 
 	return exampleApp.ExportAppStateAndValidators(forZeroHeight, jailAllowedAddrs, modulesToExport)

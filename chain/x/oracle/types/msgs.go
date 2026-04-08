@@ -61,6 +61,12 @@ func (msg MsgSubmitData) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{signer}
 }
 
+func (*MsgSubmitData) Route() string { return RouterKey }
+func (*MsgSubmitData) Type() string  { return "submit_data" }
+func (msg *MsgSubmitData) GetSignBytes() []byte {
+	return sdk.MustSortJSON(amino.MustMarshalJSON(msg))
+}
+
 // ---------------------------------------------------------------------------
 // MsgAddOracle
 // ---------------------------------------------------------------------------
@@ -105,6 +111,12 @@ func (msg MsgAddOracle) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{signer}
 }
 
+func (*MsgAddOracle) Route() string { return RouterKey }
+func (*MsgAddOracle) Type() string  { return "add_oracle" }
+func (msg *MsgAddOracle) GetSignBytes() []byte {
+	return sdk.MustSortJSON(amino.MustMarshalJSON(msg))
+}
+
 // ---------------------------------------------------------------------------
 // MsgRemoveOracle
 // ---------------------------------------------------------------------------
@@ -140,4 +152,10 @@ func (msg MsgRemoveOracle) ValidateBasic() error {
 func (msg MsgRemoveOracle) GetSigners() []sdk.AccAddress {
 	signer, _ := sdk.AccAddressFromBech32(msg.Authority)
 	return []sdk.AccAddress{signer}
+}
+
+func (*MsgRemoveOracle) Route() string { return RouterKey }
+func (*MsgRemoveOracle) Type() string  { return "remove_oracle" }
+func (msg *MsgRemoveOracle) GetSignBytes() []byte {
+	return sdk.MustSortJSON(amino.MustMarshalJSON(msg))
 }

@@ -11,6 +11,8 @@ import (
 	"energychain/x/identity/types"
 )
 
+var identityParamsKey = []byte("identity_params")
+
 type Keeper struct {
 	cdc       codec.Codec
 	storeKey  storetypes.StoreKey
@@ -27,6 +29,25 @@ func NewKeeper(cdc codec.Codec, storeKey storetypes.StoreKey, authority string) 
 
 func (k Keeper) GetAuthority() string {
 	return k.authority
+}
+
+func (k Keeper) SetParams(ctx sdk.Context, params types.Params) {
+	store := ctx.KVStore(k.storeKey)
+	bz, _ := json.Marshal(params)
+	store.Set(identityParamsKey, bz)
+}
+
+func (k Keeper) GetParams(ctx sdk.Context) types.Params {
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get(identityParamsKey)
+	if bz == nil {
+		return types.DefaultParams()
+	}
+	var params types.Params
+	if err := json.Unmarshal(bz, &params); err != nil {
+		return types.DefaultParams()
+	}
+	return params
 }
 
 // ---------------------------------------------------------------------------
@@ -113,7 +134,7 @@ func (k Keeper) GetAllIdentities(ctx sdk.Context) []types.Identity {
 func (k Keeper) ExportGenesis(ctx sdk.Context) *types.GenesisState {
 	return &types.GenesisState{
 		Identities: k.GetAllIdentities(ctx),
-		Params:     types.DefaultParams(),
+		Params:     k.GetParams(ctx),
 	}
 }
 

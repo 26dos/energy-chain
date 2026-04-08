@@ -74,7 +74,12 @@ func NewAppModule(cdc codec.Codec, keeper keeper.Keeper) AppModule {
 
 func (am AppModule) Name() string { return types.ModuleName }
 
-func (am AppModule) RegisterServices(_ module.Configurator) {}
+func (am AppModule) RegisterServices(cfg module.Configurator) {
+	// Full gRPC service registration requires proto-generated service descriptors.
+	// MsgServer: keeper.NewMsgServerImpl(am.keeper) implements types.MsgServer
+	// QueryServer: keeper.NewQueryServerImpl(am.keeper) implements types.QueryServer
+	_ = cfg
+}
 
 func (am AppModule) InitGenesis(ctx sdk.Context, _ codec.JSONCodec, data json.RawMessage) {
 	var gs types.GenesisState

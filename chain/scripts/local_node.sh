@@ -54,11 +54,11 @@ if [[ -z "$overwrite" && -d "$CHAINDIR" ]]; then
 fi
 [[ -z "$overwrite" ]] && overwrite="y"
 
-# Validator mnemonic (test only)
-VAL_MNEMONIC="gesture inject test cycle original hollow east ridge hen combine junk child bacon zero hope comfort vacuum milk pitch cage oppose unhappy lunar seat"
+# Mnemonics: read from env or use defaults for LOCAL DEV ONLY
+# For production, ALWAYS set these via environment variables
+VAL_MNEMONIC="${VAL_MNEMONIC:-gesture inject test cycle original hollow east ridge hen combine junk child bacon zero hope comfort vacuum milk pitch cage oppose unhappy lunar seat}"
 
-# Dev account (for contract deployment)
-DEV_MNEMONIC="copper push brief egg scan entry inform record adjust fossil boss egg comic alien upon aspect dry avoid interest fury window hint race symptom"
+DEV_MNEMONIC="${DEV_MNEMONIC:-copper push brief egg scan entry inform record adjust fossil boss egg comic alien upon aspect dry avoid interest fury window hint race symptom}"
 
 if [[ "$overwrite" == "y" || "$overwrite" == "Y" ]]; then
   rm -rf "$CHAINDIR"
@@ -109,8 +109,10 @@ if [[ "$overwrite" == "y" || "$overwrite" == "Y" ]]; then
   sed -i.bak 's/enabled = false/enabled = true/g' "$APP_TOML"
   sed -i.bak 's/enable = false/enable = true/g' "$APP_TOML"
   sed -i.bak 's/enable-indexer = false/enable-indexer = true/g' "$APP_TOML"
-  sed -i.bak 's/enabled-unsafe-cors = false/enabled-unsafe-cors = true/g' "$APP_TOML"
-  sed -i.bak 's/cors_allowed_origins = \[\]/cors_allowed_origins = ["*"]/g' "$CONFIG_TOML"
+  # CORS: allow all origins in dev; for production use specific domains
+  CORS_ORIGINS="${CORS_ALLOWED_ORIGINS:-*}"
+  sed -i.bak "s/enabled-unsafe-cors = false/enabled-unsafe-cors = true/g" "$APP_TOML"
+  sed -i.bak "s|cors_allowed_origins = \[\]|cors_allowed_origins = [\"$CORS_ORIGINS\"]|g" "$CONFIG_TOML"
 
   # Create genesis tx and finalize
   $BINARY genesis gentx validator 1000000000000000000000${DENOM} --gas-prices 10000000000${DENOM} --keyring-backend "$KEYRING" --chain-id "$CHAINID" --home "$CHAINDIR"
@@ -123,17 +125,18 @@ if [[ "$overwrite" == "y" || "$overwrite" == "Y" ]]; then
   echo "Denom:      $DENOM"
   echo "Home:       $CHAINDIR"
   echo ""
-  echo "Dev account private key (for contract deployment):"
-  echo "  0x88cbead91aee890d27bf06e003ade3d4e952427e88f88d31d61d3ef5e5d54305"
+  echo "Dev account 'dev0' created. Use 'energychaind keys export dev0 --unsafe --unarmored' to get the private key."
   echo ""
 fi
 
 echo "Starting energychaind..."
+# JSON-RPC APIs: personal and debug are removed for safety; override with JSON_RPC_API env
+JSON_RPC_API="${JSON_RPC_API:-eth,txpool,net,web3}"
 $BINARY start \
   --pruning nothing \
   --log_level "$LOGLEVEL" \
   --minimum-gas-prices=10000000000${DENOM} \
   --evm.min-tip=0 \
   --home "$CHAINDIR" \
-  --json-rpc.api eth,txpool,personal,net,debug,web3 \
+  --json-rpc.api "$JSON_RPC_API" \
   --chain-id "$CHAINID"

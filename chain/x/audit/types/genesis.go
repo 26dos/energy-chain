@@ -3,20 +3,27 @@ package types
 import "fmt"
 
 type Params struct {
-	LargeTransferThreshold uint64 `json:"large_transfer_threshold"`
-	RetentionBlocks        int64  `json:"retention_blocks"`
+	LargeTransferThreshold uint64   `json:"large_transfer_threshold"`
+	RetentionBlocks        int64    `json:"retention_blocks"`
+	AllowedAuditors        []string `json:"allowed_auditors"`
+	MaxDataSize            int      `json:"max_data_size"`
 }
 
 func DefaultParams() Params {
 	return Params{
 		LargeTransferThreshold: 1_000_000,
 		RetentionBlocks:        0,
+		AllowedAuditors:        []string{},
+		MaxDataSize:            65536,
 	}
 }
 
 func (p Params) Validate() error {
 	if p.RetentionBlocks < 0 {
 		return fmt.Errorf("retention_blocks must be non-negative, got %d", p.RetentionBlocks)
+	}
+	if p.MaxDataSize < 0 {
+		return fmt.Errorf("max_data_size must be non-negative, got %d", p.MaxDataSize)
 	}
 	return nil
 }

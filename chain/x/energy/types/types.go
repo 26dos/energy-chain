@@ -3,7 +3,6 @@ package types
 const (
 	ModuleName = "energy"
 	StoreKey   = ModuleName
-	RouterKey  = ModuleName
 )
 
 // EnergyData represents a single on-chain energy data attestation.

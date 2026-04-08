@@ -33,6 +33,9 @@ contracts/typechain-types/
 .energychaind/
 chain/data/
 
+# Frontend build output
+dex-frontend/dist/
+
 # Blockscout explorer (1.4GB+ source, clone separately)
 blockscout-explorer/
 
