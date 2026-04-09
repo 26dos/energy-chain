@@ -35,7 +35,8 @@ export EVM_HTTP_URL="http://host.docker.internal:${EVM_PORT}"
 export EVM_WS_URL="ws://host.docker.internal:$((EVM_PORT + 1))"
 docker compose up -d
 
-echo "  Blockscout starting at http://127.0.0.1:4000"
+echo "  Blockscout starting at http://127.0.0.1:3001"
+echo "  Stats API at http://127.0.0.1:8080"
 echo "  (First startup takes 1-2 minutes to initialize DB)"
 echo ""
 
@@ -89,24 +90,25 @@ fi
 echo "  Building Ping.pub..."
 npm run build 2>&1 | tail -3
 
-# Kill any existing serve process on port 8080
-lsof -ti:8080 | xargs kill -9 2>/dev/null || true
+# Kill any existing serve process on port 5173
+lsof -ti:5173 | xargs kill -9 2>/dev/null || true
 sleep 1
 
 cd dist
-nohup npx serve -s -l 8080 > /tmp/pingpub.log 2>&1 &
+nohup npx serve -s -l 5173 > /tmp/pingpub.log 2>&1 &
 PING_PID=$!
 cd ..
 
-echo "  Ping.pub running at http://127.0.0.1:8080/energychain (PID: $PING_PID)"
+echo "  Ping.pub running at http://127.0.0.1:5173/energychain (PID: $PING_PID)"
 echo ""
 
 echo "=============================================="
 echo "  Explorers Deployed"
 echo "=============================================="
 echo ""
-echo "  Blockscout (EVM):   http://127.0.0.1:4000"
-echo "  Ping.pub (Cosmos):  http://127.0.0.1:8080/energychain"
+echo "  Blockscout (EVM):   http://127.0.0.1:3001"
+echo "  Blockscout Stats:   http://127.0.0.1:8080"
+echo "  Ping.pub (Cosmos):  http://127.0.0.1:5173/energychain"
 echo ""
 echo "  Stop Blockscout:    cd blockscout && docker compose down"
 echo "  Stop Ping.pub:      kill $PING_PID"
