@@ -2,72 +2,75 @@
 
 ## 目录
 
-- [快速开始 (本地 Mac)](#快速开始-本地-mac)
+- [快速开始](#快速开始)
 - [Ubuntu 生产部署](#ubuntu-生产部署)
-- [Ubuntu 重新部署 (清除旧数据)](#ubuntu-重新部署-清除旧数据)
+- [清除旧数据重新部署](#清除旧数据重新部署)
 - [架构](#架构)
-- [前置条件](#前置条件)
 - [链参数](#链参数)
-- [第一步: 创建业务钱包](#第一步-创建业务钱包)
-- [第二步: 部署 DEX 合约](#第二步-部署-dex-合约)
-- [第三步: DEX 流动性与交易](#第三步-dex-流动性与交易)
-- [第四步: 批量数据上链](#第四步-批量数据上链)
-- [第五步: 部署区块浏览器](#第五步-部署区块浏览器)
+- [端口分配](#端口分配)
+- [创建业务钱包](#创建业务钱包)
+- [部署 DEX 合约](#部署-dex-合约)
+- [DEX 流动性与交易](#dex-流动性与交易)
+- [DEX 前端](#dex-前端)
+- [批量数据上链](#批量数据上链)
+- [部署区块浏览器](#部署区块浏览器)
+- [MetaMask 连接](#metamask-连接)
+- [持续交易保障](#持续交易保障)
 - [手动测试命令](#手动测试命令)
 - [脚本总览](#脚本总览)
 - [停止服务](#停止服务)
 - [故障排除](#故障排除)
-- [目录结构](#目录结构)
 
 ---
 
-## 快速开始 (本地 Mac)
+## 快速开始
+
+### 本地 Mac 单节点开发
 
 ```bash
-# 1. 构建链二进制
 cd chain && go install ./cmd/energychaind && cd ..
 export PATH="$HOME/go/bin:$PATH"
-
-# 2. 启动链节点 (单节点开发模式)
 bash chain/scripts/local_node.sh -y
-
-# 3. 创建业务钱包并分配资金
-bash scripts/setup_wallets.sh
-
-# 4. 部署 DEX 合约 + 前端
-bash scripts/deploy_dex.sh
-
-# 5. DEX 添加流动性 + 启动交易机器人
-bash scripts/dex_full_setup.sh
-
-# 6. 持续批量数据上链 (后台运行)
-nohup bash scripts/batch_upload_loop.sh contract > /tmp/batch_upload.log 2>&1 &
-
-# 7. 部署区块浏览器
-bash scripts/deploy_explorers.sh
 ```
+
+单节点端口: CometBFT=26657, REST=1317, EVM=8545, gRPC=9090
+
+### 本地 Mac 生产模式 (8 节点)
+
+```bash
+cd chain && go install ./cmd/energychaind && cd ..
+bash chain/scripts/deploy_production.sh
+```
+
+Fullnode 端口: CometBFT=26687, REST=1320, EVM=8575, gRPC=9390
 
 ---
 
 ## Ubuntu 生产部署
 
-在 Ubuntu 服务器上部署完整的生产级网络 (8 节点拓扑)。
-
 ### 1. 环境准备
 
 ```bash
-# 安装 Go
+# Go 1.23+
 wget https://go.dev/dl/go1.23.4.linux-amd64.tar.gz
 sudo rm -rf /usr/local/go
 sudo tar -C /usr/local -xzf go1.23.4.linux-amd64.tar.gz
 echo 'export PATH=$PATH:/usr/local/go/bin:$HOME/go/bin' >> ~/.bashrc
 source ~/.bashrc
 
-# 安装 Node.js 18+
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt install -y nodejs
+# Node.js 22 LTS (推荐 nvm 方式, 国内网络更稳定)
+curl -o- https://gitee.com/mirrors/nvm/raw/master/install.sh | bash
+source ~/.bashrc
+nvm install 22
+nvm use 22
 
-# 安装 jq + Docker
+# 如果 nvm 不可用, 手动下载:
+# wget https://nodejs.org/dist/v22.14.0/node-v22.14.0-linux-x64.tar.xz
+# sudo tar -xJf node-v22.14.0-linux-x64.tar.xz -C /usr/local/lib/
+# sudo ln -sf /usr/local/lib/node-v22.14.0-linux-x64/bin/node /usr/local/bin/node
+# sudo ln -sf /usr/local/lib/node-v22.14.0-linux-x64/bin/npm /usr/local/bin/npm
+
+# jq + Docker
 sudo apt install -y jq
 curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker $USER
@@ -81,129 +84,118 @@ git clone https://github.com/YOUR_ORG/energy-chain.git
 cd energy-chain
 git checkout main
 
-# 构建链二进制
 cd chain && go install ./cmd/energychaind && cd ..
 ```
 
-### 3. 部署生产节点
+### 3. 部署 8 节点网络
 
 ```bash
-# 一键部署 8 节点 (Seed + 2 Sentry + Fullnode + 4 Validator)
 bash chain/scripts/deploy_production.sh
 ```
 
-### 4. 后续步骤
+脚本自动完成: 初始化 → 创建密钥 → 配置创世 → 分配端口 → 启动全部 8 节点
+
+### 4. 创建钱包 → 部署合约 → 上链 → 浏览器
 
 ```bash
+# 逐步执行 (推荐):
+
 # 创建业务钱包
 bash scripts/setup_wallets.sh
 
-# 部署 DEX
-bash scripts/deploy_dex.sh
+# 部署 DEX 合约 (需要设置环境变量指向 fullnode)
+cd contracts && npm install && cd ..
+export PRIVATE_KEY=$(energychaind keys unsafe-export-eth-key dev0 \
+  --keyring-backend test --home ~/.energychain-production/validator-0)
+export RPC_URL="http://127.0.0.1:8575"
 
-# DEX 流动性 + 交易
-bash scripts/dex_full_setup.sh
+npx hardhat run scripts/deploy_dex.ts --network energychain_testnet
 
-# 持续数据上链
-nohup bash scripts/batch_upload_loop.sh contract > /tmp/batch_upload.log 2>&1 &
+# 添加流动性
+npx hardhat run scripts/add_liquidity.ts --network energychain_testnet
+
+# 启动 DEX 前端
+cd dex-frontend && npm install
+cp .env.example .env
+# 编辑 .env 填入 contracts/dex-deployment.json 中的合约地址
+npm run build && npx vite preview --port 3000 --host 0.0.0.0 &
+
+# 启动 DEX 交易机器人 + 有功功率数据持续上链
+# 方式 A: nohup (简单, 服务器重启后需手动拉起)
+nohup bash scripts/run_trade_bot.sh > /tmp/trades.log 2>&1 &
+nohup bash scripts/run_data_uploader.sh rawtx > /tmp/batch_upload.log 2>&1 &
+
+# 方式 B: systemd (推荐生产环境, 服务器重启后自动拉起)
+# 详见 "持续交易保障" 章节
 
 # 部署浏览器
 bash scripts/deploy_explorers.sh
 ```
 
----
-
-## Ubuntu 重新部署 (清除旧数据)
-
-当需要在 Ubuntu 上删除旧数据并重新部署时，按以下步骤操作:
-
-### 1. 停止所有服务
+### 5. 验证部署
 
 ```bash
-# 停止链节点
-pkill -f 'energychaind start' || true
-sleep 3
-
-# 停止 Blockscout
-cd blockscout && docker compose down && cd ..
-
-# 停止 Ping.pub
-lsof -ti:8080 | xargs kill -9 2>/dev/null || true
-
-# 停止 DEX 前端
-lsof -ti:3000 | xargs kill -9 2>/dev/null || true
-
-# 停止批量上链脚本
-pkill -f 'batch_upload_loop' || true
-pkill -f 'upload_evm_contract' || true
-pkill -f 'upload_evm_rawtx' || true
-```
-
-### 2. 清除旧数据
-
-```bash
-# 删除生产节点数据 (8 节点数据 + 日志)
-rm -rf ~/.energychain-production
-
-# 删除单节点数据 (如果也用了)
-rm -rf ~/.energychaind
-
-# 清除 Blockscout Docker 卷 (数据库)
-cd blockscout
-docker compose down -v   # -v 删除所有 volume
-cd ..
-
-# 清除 Ping.pub 构建缓存
-rm -rf ping-explorer/dist
-
-# 清除合约部署记录 (重新部署合约时需要)
-# 注意: 链重新初始化后旧合约地址无效, 必须重新部署
-rm -f contracts/deployment.json
-rm -f contracts/dex-deployment.json
-```
-
-### 3. 重新部署
-
-```bash
-# 重新构建二进制 (如果代码有更新)
-cd chain && go install ./cmd/energychaind && cd ..
-
-# 重新部署 (选择单节点或多节点)
-# 单节点:
-bash chain/scripts/local_node.sh -y
-
-# 多节点:
-bash chain/scripts/deploy_production.sh
-
-# 等待节点完全启动
-sleep 10
-
-# 创建钱包 + 部署合约 + 上链 + 浏览器
-bash scripts/setup_wallets.sh
-bash scripts/deploy_dex.sh
-bash scripts/dex_full_setup.sh
-nohup bash scripts/batch_upload_loop.sh contract > /tmp/batch_upload.log 2>&1 &
-bash scripts/deploy_explorers.sh
-```
-
-### 4. 验证重新部署成功
-
-```bash
-# 检查节点运行
+# 节点数量
 ps aux | grep 'energychaind start' | grep -v grep | wc -l
+# 应该输出 8
 
-# 检查最新区块
-curl -s http://127.0.0.1:26657/status | jq '.result.sync_info.latest_block_height'
+# Fullnode 状态
+curl -s http://127.0.0.1:26687/status | jq '.result.sync_info.latest_block_height'
 
-# 检查钱包余额
-energychaind query bank balances $(energychaind keys show validator --keyring-backend test -a) \
-  --node http://127.0.0.1:26657
+# EVM JSON-RPC
+curl -s -X POST http://127.0.0.1:8575 \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 
-# 检查 Blockscout 容器
+# REST API
+curl -s http://127.0.0.1:1320/cosmos/base/tendermint/v1beta1/syncing
+
+# Blockscout
 docker ps | grep blockscout
 
-# 检查批量上链是否在运行
-ps aux | grep batch_upload | grep -v grep
+# DEX 前端
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:3000
+
+# 交易机器人
+ps aux | grep -E 'run_trade_bot|simulate_trades' | grep -v grep
+# Ubuntu systemd: sudo systemctl status energy-trade-bot
+
+# 批量上链
+ps aux | grep -E 'run_data_uploader|batch_upload' | grep -v grep
+# Ubuntu systemd: sudo systemctl status energy-data-uploader
+```
+
+---
+
+## 清除旧数据重新部署
+
+```bash
+# 1. 停止所有服务
+# Ubuntu systemd 模式:
+# sudo systemctl stop energy-trade-bot energy-data-uploader 2>/dev/null || true
+pkill -f 'energychaind start' || true
+sleep 3
+cd blockscout && docker compose down -v && cd ..
+pkill -f 'run_trade_bot' || true
+pkill -f 'run_data_uploader' || true
+pkill -f 'batch_upload_loop' || true
+pkill -f 'simulate_trades' || true
+pkill -f 'serve.*ping-explorer' || true
+lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+
+# 2. 删除数据
+rm -rf ~/.energychain-production ~/.energychaind ~/.energychain-evmnode
+rm -rf ping-explorer/dist
+rm -f contracts/deployment.json contracts/dex-deployment.json
+
+# 3. 重新部署 (如果代码更新了先 go install)
+cd chain && go install ./cmd/energychaind && cd ..
+bash chain/scripts/deploy_production.sh
+
+# 4. 等待出块后执行后续步骤
+sleep 15
+bash scripts/setup_wallets.sh
+# ... 继续部署 DEX、浏览器等
 ```
 
 ---
@@ -212,534 +204,776 @@ ps aux | grep batch_upload | grep -v grep
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    EnergyChain 网络                       │
+│              EnergyChain 生产网络 (8 节点)                │
 │                                                          │
-│  单节点模式 (本地开发)                                     │
-│  ┌──────────────────────────────────┐                    │
-│  │  energychaind                    │                    │
-│  │  CometBFT RPC  : 26657          │                    │
-│  │  REST API      : 1317           │                    │
-│  │  EVM JSON-RPC  : 8545           │                    │
-│  │  EVM WebSocket : 8546           │                    │
-│  │  gRPC          : 9090           │                    │
-│  │  P2P           : 26656          │                    │
-│  └──────────┬───────────┬──────────┘                    │
-│             │           │                                │
-│  ┌──────────▼──┐  ┌─────▼──────┐  ┌─────────────┐      │
-│  │  Blockscout  │  │  Ping.pub  │  │ DEX Frontend│      │
-│  │  API:4000    │  │  :8080     │  │ :3000       │      │
-│  │  UI:3001     │  │            │  │             │      │
-│  └─────────────┘  └────────────┘  └─────────────┘      │
-│                                                          │
-│  生产多节点模式                                           │
-│  ┌────────┐  ┌──────────┐  ┌──────────┐                 │
-│  │  Seed  │──│ Sentry-0 │──│ Val-0    │                 │
-│  │ :26656 │  │ :26666   │  │ :26696   │                 │
-│  │        │  │          │──│ Val-1    │                 │
-│  │        │  │          │  │ :26706   │                 │
-│  │        │  └──────────┘  └──────────┘                 │
-│  │        │  ┌──────────┐  ┌──────────┐                 │
-│  │        │──│ Sentry-1 │──│ Val-2    │                 │
-│  │        │  │ :26676   │  │ :26716   │                 │
-│  │        │  │          │──│ Val-3    │                 │
-│  │        │  │          │  │ :26726   │                 │
-│  │        │  └──────────┘  └──────────┘                 │
-│  └────┬───┘                                              │
-│       │      ┌──────────┐                                │
-│       └──────│ Fullnode │                                │
-│              │ RPC:26687│                                │
-│              │ API:1320 │                                │
-│              │ EVM:8575 │                                │
-│              └──────────┘                                │
+│  ┌────────┐                                              │
+│  │  Seed  │  P2P=26656 (种子节点, 无 API)                │
+│  └───┬────┘                                              │
+│      │                                                   │
+│  ┌───┴──────┐    ┌──────────┐  ┌──────────┐             │
+│  │ Sentry-0 │────│ Val-0    │  │ Val-1    │             │
+│  │ P2P=26666│    │ P2P=26696│  │ P2P=26706│             │
+│  └──────────┘    └──────────┘  └──────────┘             │
+│  ┌──────────┐    ┌──────────┐  ┌──────────┐             │
+│  │ Sentry-1 │────│ Val-2    │  │ Val-3    │             │
+│  │ P2P=26676│    │ P2P=26716│  │ P2P=26726│             │
+│  └──────────┘    └──────────┘  └──────────┘             │
+│      │                                                   │
+│  ┌───┴──────────────────────────────────┐                │
+│  │  Fullnode (公共 RPC 端点)             │                │
+│  │  CometBFT RPC : 26687               │                │
+│  │  REST API     : 1320                │                │
+│  │  EVM JSON-RPC : 8575                │                │
+│  │  EVM WS       : 8576                │                │
+│  │  gRPC         : 9390                │                │
+│  └──────┬───────────┬──────────────────┘                │
+│         │           │                                    │
+│  ┌──────┴──────────────────────────┐                     │
+│  │ Blockscout (Docker Compose)     │                     │
+│  │  ┌─────────────┐               │                     │
+│  │  │ Nginx Proxy │ :3001 → 前端  │                     │
+│  │  │             │ :3001/api → 后端                     │
+│  │  │             │ :8080 → Stats │                     │
+│  │  └──────┬──────┘               │                     │
+│  │   ┌─────┴─────┐ ┌───────────┐  │                     │
+│  │   │ Frontend  │ │  Backend  │  │                     │
+│  │   │ Next.js   │ │  v9.0.2   │  │                     │
+│  │   └───────────┘ └─────┬─────┘  │                     │
+│  │   ┌───────────┐ ┌─────┴─────┐  │                     │
+│  │   │  Stats    │ │ Postgres  │  │                     │
+│  │   │  Service  │ │ + Redis   │  │                     │
+│  │   └───────────┘ └───────────┘  │                     │
+│  └─────────────────────────────────┘                     │
+│         │           │                                    │
+│  ┌──────┴──┐  ┌─────┴────┐                              │
+│  │Ping.pub │  │DEX 前端  │                              │
+│  │ :5173   │  │ :3000    │                              │
+│  └─────────┘  └──────────┘                              │
 └──────────────────────────────────────────────────────────┘
 ```
-
-## 前置条件
-
-| 工具 | 版本 | Ubuntu 安装 | macOS 安装 |
-|------|------|-------------|------------|
-| Go | >= 1.23 | 见上方 Ubuntu 环境准备 | `brew install go` |
-| Node.js | >= 18 | `sudo apt install nodejs` | `brew install node` |
-| jq | any | `sudo apt install jq` | `brew install jq` |
-| Docker | any | `curl -fsSL https://get.docker.com \| sudo sh` | [Docker Desktop](https://www.docker.com/products/docker-desktop/) |
 
 ## 链参数
 
 | 参数 | 值 |
 |------|------|
 | Chain ID (Cosmos) | `energychain_9001-1` |
-| Chain ID (EVM) | `262144` |
+| Chain ID (EVM) | `262144` (0x40000) |
 | Denom | `uecy` (micro), `ecy` (display, 18 decimals) |
 | Min Gas Price | `10 Gwei` (`10000000000uecy`) |
 | Key Algorithm | `eth_secp256k1` |
 | Address Prefix | `energy` |
 | Block Gas Limit | `60,000,000` |
 
+## 端口分配
+
+### 生产多节点模式
+
+| 节点 | P2P | CometBFT RPC | EVM | REST | gRPC | 角色 |
+|------|------|------|------|------|------|------|
+| Seed | 26656 | 26657 | - | - | - | 种子节点 (无 API) |
+| Sentry-0 | 26666 | 26667 | 8555 | 1318 | 9190 | 哨兵 (保护 Val-0,1) |
+| Sentry-1 | 26676 | 26677 | 8565 | 1319 | 9290 | 哨兵 (保护 Val-2,3) |
+| **Fullnode** | **26686** | **26687** | **8575** | **1320** | **9390** | **公共 RPC** |
+| Val-0 | 26696 | 26697 | 8585 | 1321 | 9490 | 验证者 |
+| Val-1 | 26706 | 26707 | 8595 | 1322 | 9590 | 验证者 |
+| Val-2 | 26716 | 26717 | 8605 | 1323 | 9690 | 验证者 |
+| Val-3 | 26726 | 26727 | 8615 | 1324 | 9790 | 验证者 |
+
+**所有 DEX/浏览器/上链脚本都应连接 Fullnode 端口** (EVM=8575, REST=1320, RPC=26687)
+
+### 单节点开发模式
+
+| 服务 | 端口 |
+|------|------|
+| CometBFT RPC | 26657 |
+| REST API | 1317 |
+| EVM JSON-RPC | 8545 |
+| gRPC | 9090 |
+
+### 浏览器及服务端口
+
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| Blockscout (统一入口) | **3001** | Nginx 代理，前端 + API 统一访问 |
+| Blockscout Stats API | **8080** | 图表统计数据 (通过 Nginx 代理到 Stats 微服务) |
+| Blockscout Backend | 4000 (内部) | Elixir/Phoenix API，不直接对外暴露 |
+| Blockscout Frontend | 3000 (内部) | Next.js 前端，不直接对外暴露 |
+| Ping.pub | 5173 | Cosmos 浏览器 |
+| DEX 前端 | 3000 | EnergySwap |
+
 ---
 
-## 第一步: 创建业务钱包
-
-不同业务使用不同钱包，避免 nonce 冲突和资金混用:
+## 创建业务钱包
 
 ```bash
+# 自动创建 (推荐)
 bash scripts/setup_wallets.sh
 ```
 
-该脚本创建以下钱包并从验证者账户分配资金:
+| 钱包 | 用途 | 资金 |
+|------|------|------|
+| `dev0` | 合约部署、管理 | 50,000 ECY |
+| `dex-operator` | DEX 操作 | 100 ECY |
+| `data-uploader` | 数据上链 | 100 ECY |
+| `trader-1` | 交易测试 | 100 ECY |
+| `trader-2` | 交易测试 | 100 ECY |
 
-| 钱包名称 | 用途 | 分配资金 |
-|----------|------|---------|
-| `data-submitter` | 有功功率数据上链 | 50,000 ECY |
-| `dex-trader` | DEX 自动交易机器人 | 100,000 ECY |
-| `dex-lp` | DEX 流动性提供 | 200,000 ECY |
-| `test-user-1` | 测试转账 | 10,000 ECY |
-| `test-user-2` | 测试转账 | 10,000 ECY |
-| `test-user-3` | 测试转账 | 10,000 ECY |
-
-### 手动创建钱包
+### 手动操作
 
 ```bash
-# 创建单个钱包
+# 生产模式的 home 目录
+HOME_DIR="$HOME/.energychain-production/validator-0"
+# 单节点模式用: HOME_DIR="$HOME/.energychaind"
+
+# 创建钱包
 energychaind keys add my-wallet \
-  --keyring-backend test \
-  --algo eth_secp256k1 \
-  --home ~/.energychaind
+  --keyring-backend test --algo eth_secp256k1 --home $HOME_DIR
 
 # 查看地址
-energychaind keys show my-wallet --keyring-backend test --home ~/.energychaind -a
+energychaind keys show my-wallet -a --keyring-backend test --home $HOME_DIR
 
-# 导出 EVM 私钥 (用于 MetaMask)
+# 导出 EVM 私钥 (用于 MetaMask / Hardhat)
 energychaind keys unsafe-export-eth-key my-wallet \
-  --keyring-backend test --home ~/.energychaind
-```
+  --keyring-backend test --home $HOME_DIR
 
-### 手动转账
-
-```bash
-# Cosmos 原生转账 (1 ECY = 1000000000000000000 uecy)
-energychaind tx bank send validator energy1_RECIPIENT_ADDR 10000000000000000000000uecy \
-  --fees 100000000000000uecy \
-  --keyring-backend test \
-  --home ~/.energychaind \
+# 转账 (100 ECY)
+energychaind tx bank send validator0 \
+  $(energychaind keys show my-wallet -a --keyring-backend test --home $HOME_DIR) \
+  100000000000000000000uecy \
+  --from validator0 --keyring-backend test --home $HOME_DIR \
   --chain-id energychain_9001-1 \
-  --node http://127.0.0.1:26657 -y
+  --node tcp://127.0.0.1:26697 \
+  --gas-prices 10000000000uecy --gas auto --gas-adjustment 1.5 -y
 
-# 批量转账 (10 ECY 给每个测试钱包)
-for i in 1 2 3; do
-  ADDR=$(energychaind keys show test-user-$i --keyring-backend test --home ~/.energychaind -a)
-  energychaind tx bank send validator $ADDR 10000000000000000000uecy \
-    --fees 100000000000000uecy --keyring-backend test \
-    --home ~/.energychaind --chain-id energychain_9001-1 -y
-  sleep 2
-done
+# 查看余额
+energychaind query bank balance \
+  $(energychaind keys show my-wallet -a --keyring-backend test --home $HOME_DIR) uecy \
+  --node tcp://127.0.0.1:26687
 ```
 
 ---
 
-## 第二步: 部署 DEX 合约
+## 部署 DEX 合约
 
 ```bash
-bash scripts/deploy_dex.sh
+cd contracts && npm install
+
+# 导出私钥
+export PRIVATE_KEY=$(energychaind keys unsafe-export-eth-key dev0 \
+  --keyring-backend test --home ~/.energychain-production/validator-0)
+export RPC_URL="http://127.0.0.1:8575"
+
+# 部署全套 DEX 合约
+npx hardhat run scripts/deploy_dex.ts --network energychain_testnet
 ```
 
-该脚本部署以下合约:
+部署的合约:
 
 | 合约 | 说明 |
 |------|------|
-| `WECY` | Wrapped ECY (类似 WETH) |
+| `WECY` | Wrapped ECY |
 | `UniswapV2Factory` | 交易对工厂 |
-| `UniswapV2Router02` | 路由合约 (swap/liquidity) |
+| `UniswapV2Router02` | 路由合约 |
 | `Multicall3` | 批量调用聚合 |
-| `ERC20TokenFactory` | ERC20 代币工厂 (一键创建新代币) |
-| `TestUSDT` | 测试 USDT 代币 (10 亿枚，18 精度) |
+| `ERC20TokenFactory` | ERC20 代币工厂 |
+| `TestUSDT` | 测试 USDT (10 亿枚) |
 
-部署完成后:
-- 合约地址保存在 `contracts/dex-deployment.json`
-- DEX 前端启动在 http://localhost:3000
-- 使用 `dev0` 账户的私钥部署
-
-### 手动部署更多测试代币
-
-```bash
-cd contracts
-
-# 通过 TokenFactory 合约创建新代币
-# (部署脚本已经创建了 TestUSDT, 可以用相同方式创建更多)
-PRIVATE_KEY="YOUR_KEY" RPC_URL="http://127.0.0.1:8545" \
-  npx hardhat console --network energychain_testnet
-
-# 在 console 中:
-# const tf = await ethers.getContractAt("ERC20TokenFactory", "合约地址");
-# await tf.createToken("Test DAI", "DAI", 18, ethers.parseEther("1000000000"));
-```
+合约地址保存在 `contracts/dex-deployment.json`
 
 ---
 
-## 第三步: DEX 流动性与交易
-
-### 一键执行 (添加流动性 + 启动交易)
+## DEX 流动性与交易
 
 ```bash
-bash scripts/dex_full_setup.sh
-```
+export PRIVATE_KEY=$(energychaind keys unsafe-export-eth-key dev0 \
+  --keyring-backend test --home ~/.energychain-production/validator-0)
+export RPC_URL="http://127.0.0.1:8575"
 
-### 分步执行
-
-```bash
-# 仅添加流动性 (100,000 USDT + 10,000 ECY, 初始价格 1 ECY = 10 USDT)
-bash scripts/dex_full_setup.sh liquidity
-
-# 给交易钱包分配 USDT
-bash scripts/dex_full_setup.sh fund
-
-# 启动自动交易机器人 (无限循环, Ctrl+C 停止)
-bash scripts/dex_full_setup.sh trade
-
-# 运行 10 项完整合约测试
-bash scripts/dex_full_setup.sh test
-```
-
-### 交易机器人说明
-
-`simulate_trades.ts` 模拟真实市场行为，包含 5 个阶段循环:
-
-| 阶段 | 买入概率 | 单笔范围 | 说明 |
-|------|---------|---------|------|
-| accumulate | 75% | 200-800 USDT | 吸筹 |
-| rally | 90% | 500-2500 USDT | 拉升 |
-| consolidate | 60% | 100-500 USDT | 盘整 |
-| pullback | 40% | 150-600 USDT | 回调 |
-| breakout | 93% | 800-3500 USDT | 突破 |
-
-每个阶段 15-30 笔交易，交易间隔 1-7 秒。运行后区块链上会持续产生 swap 交易。
-
-### 手动 DEX 操作 (Hardhat Console)
-
-```bash
+# 添加流动性 (100,000 USDT + 10,000 ECY)
 cd contracts
-PRIVATE_KEY="YOUR_KEY" RPC_URL="http://127.0.0.1:8545" \
-  npx hardhat console --network energychain_testnet
+npx hardhat run scripts/add_liquidity.ts --network energychain_testnet
 ```
 
-```javascript
-// 在 console 中:
-const dep = require('./dex-deployment.json');
-const router = await ethers.getContractAt("UniswapV2Router02", dep.contracts.UniswapV2Router02);
-const usdt = await ethers.getContractAt("SimpleERC20", dep.contracts.TestUSDT);
+### 启动交易机器人 (无限循环)
 
-// 查看流动性池储备
-const factory = await ethers.getContractAt("UniswapV2Factory", dep.contracts.UniswapV2Factory);
-const pair = await factory.getPair(dep.contracts.TestUSDT, dep.contracts.WECY);
-const p = await ethers.getContractAt("UniswapV2Pair", pair);
-const [r0, r1] = await p.getReserves();
-console.log("Reserves:", ethers.formatEther(r0), "/", ethers.formatEther(r1));
+交易机器人模拟 5 个市场阶段: 吸筹 → 拉升 → 盘整 → 回调 → 突破, 每阶段 15-30 笔交易。
+**一轮完成后立即开始下一轮，永不停止。** 如果 RPC 断连等异常导致进程退出，包装脚本会在 10 秒后自动重启。
 
-// 手动 swap: 100 ECY -> USDT
-const dl = Math.floor(Date.now()/1000) + 3600;
-await router.swapExactETHForTokens(0, [dep.contracts.WECY, dep.contracts.TestUSDT],
-  (await ethers.getSigners())[0].address, dl,
-  {value: ethers.parseEther("100"), gasLimit: 500000});
+```bash
+# 方式 1: 使用守护包装脚本 (推荐, 崩溃自动重启)
+nohup bash scripts/run_trade_bot.sh > /tmp/trades.log 2>&1 &
+
+# 方式 2: 直接运行 (适合调试, 崩溃后需手动重启)
+cd contracts
+npx hardhat run scripts/simulate_trades.ts --network energychain_testnet
+
+# 查看日志
+tail -f /tmp/trades.log
+
+# 停止
+pkill -f run_trade_bot
 ```
+
+> **注意**: `run_trade_bot.sh` 内部会自动读取 `dev0` 私钥和 RPC 地址，无需手动 export 环境变量。如需指定其他钱包，可 `export PRIVATE_KEY=0x...` 后再运行。
 
 ---
 
-## 第四步: 批量数据上链
+## DEX 前端
 
-使用 `docs/有功功率数据.xlsx` 中的电表有功功率数据持续上链。
+DEX 前端 (EnergySwap) 使用 Vite + React + wagmi 构建，合约地址等配置通过 `.env` 环境变量管理。
 
-### 持续上链 (无限循环)
+### 配置
 
 ```bash
-# 通过合约存证上链 (推荐, 可通过合约查询)
-bash scripts/batch_upload_loop.sh contract
+cd dex-frontend
+cp .env.example .env
+```
 
-# 通过原始交易上链 (更便宜, 按 txHash 查询)
-bash scripts/batch_upload_loop.sh rawtx
+编辑 `.env`，从 `contracts/dex-deployment.json` 中获取合约地址填入:
 
-# 后台运行 (推荐)
-nohup bash scripts/batch_upload_loop.sh contract > /tmp/batch_upload.log 2>&1 &
+```env
+# Chain
+VITE_CHAIN_ID=262144
+VITE_RPC_URL=http://127.0.0.1:8575
+VITE_BLOCKSCOUT_URL=http://localhost:3001
 
-# 查看上链日志
+# Contracts (从 contracts/dex-deployment.json 获取)
+VITE_WECY=0x...
+VITE_FACTORY=0x...
+VITE_ROUTER=0x...
+VITE_MULTICALL3=0x...
+VITE_TOKEN_FACTORY=0x...
+
+# Tokens
+VITE_USDT=0x...
+```
+
+### 构建与启动
+
+```bash
+npm install
+npm run build
+npx vite preview --port 3000 --host 0.0.0.0
+
+# 后台运行:
+nohup npx vite preview --port 3000 --host 0.0.0.0 > /tmp/dex-frontend.log 2>&1 &
+```
+
+访问: http://localhost:3000
+
+> **注意**: 重新部署合约后需要更新 `.env` 中的地址并重新 `npm run build`。
+
+---
+
+## 批量数据上链 (有功功率数据, 无限循环)
+
+使用 `docs/有功功率数据.xlsx` 中的电表数据持续上链。**脚本以 `while true` 无限循环运行**，每轮解析全部数据逐条上链，一轮完成后等 5s 立即开始下一轮。
+
+```bash
+# 方式 1: 使用守护包装脚本 (推荐, 崩溃自动重启)
+nohup bash scripts/run_data_uploader.sh rawtx > /tmp/batch_upload.log 2>&1 &
+
+# 方式 2: 直接运行 (适合调试, 崩溃后需手动重启)
+bash scripts/batch_upload_loop.sh rawtx          # 原始交易模式 (推荐, gas 更低)
+bash scripts/batch_upload_loop.sh contract        # 合约存证模式 (可通过合约查询)
+
+# 查看进度
 tail -f /tmp/batch_upload.log
 
-# 停止上链
-pkill -f batch_upload_loop
+# 停止
+pkill -f run_data_uploader    # 停止守护脚本
+pkill -f batch_upload_loop    # 停止底层脚本
 ```
 
-脚本会:
-1. 解析 xlsx 中的电表数据 (meter, time, value)
-2. 对每条数据计算 keccak256 哈希
-3. 逐条提交到链上
-4. 一轮完成后等待 5 秒, 开始下一轮
-5. 循环往复, 保持区块不断有数据
+### 循环机制说明
 
-### 单次上链
-
-```bash
-cd scripts
-
-# 方式 A: 合约存证
-RPC_URL="http://127.0.0.1:8545" PRIVATE_KEY="YOUR_KEY" \
-  node upload_evm_contract.js
-
-# 方式 B: 原始交易
-RPC_URL="http://127.0.0.1:8545" PRIVATE_KEY_B="YOUR_KEY" \
-  node upload_evm_rawtx.js
+```
+┌─────────────────────────────────────────────────────┐
+│  run_data_uploader.sh (外层守护)                     │
+│    while true:                                       │
+│      ┌───────────────────────────────────────┐      │
+│      │  batch_upload_loop.sh (内层循环)       │      │
+│      │    while true:                         │      │
+│      │      解析 xlsx → 逐条上链 → sleep 5s   │      │
+│      │    done                                │      │
+│      └───────────────────────────────────────┘      │
+│      如果内层脚本崩溃 → 等 10s → 自动重启            │
+│    done                                              │
+└─────────────────────────────────────────────────────┘
 ```
 
-### 上链数据格式
-
-每条上链数据包含:
-
-```json
-{
-  "schema": "energy_attestation_v1",
-  "category": "active_power",
-  "data_hash": "0xkeccak256...",
-  "meter": "电表编号",
-  "time": "时间戳",
-  "value": "有功功率值"
-}
-```
-
-### Cosmos 原生批量上链 (energy 模块)
-
-除了 EVM 合约存证, 还可使用链原生 energy 模块:
-
-```bash
-# 单条上链
-energychaind tx energy submit-energy-data \
-  --category "active_power" \
-  --data-hash "0x$(echo -n '{"meter":"M001","time":"2026-01-01","value":"100.5"}' | sha256sum | cut -d' ' -f1)" \
-  --metadata '{"meter":"M001","time":"2026-01-01","value":"100.5"}' \
-  --from data-submitter \
-  --keyring-backend test \
-  --home ~/.energychaind \
-  --chain-id energychain_9001-1 \
-  --fees 100000000000000uecy -y
-```
+> **数据不断**: 即使 RPC 临时不可用，内层脚本单条失败 `|| true` 跳过继续。如果内层整个进程崩溃（如 Node.js OOM），外层守护在 10s 后自动重启。
 
 ---
 
-## 第五步: 部署区块浏览器
+## 持续交易保障
+
+在 Ubuntu 生产环境中，仅用 `nohup` 运行后台脚本存在以下风险:
+- 服务器重启后进程丢失
+- SSH 断开可能导致 HUP 信号杀死进程
+- 无法自动监控和重启
+
+推荐使用 **systemd** 管理两个持续交易进程，确保**区块交易永不中断**。
+
+### systemd 服务配置
+
+#### 1. DEX 交易机器人
 
 ```bash
-bash scripts/deploy_explorers.sh
+sudo tee /etc/systemd/system/energy-trade-bot.service << 'EOF'
+[Unit]
+Description=EnergyChain DEX Trade Bot (infinite loop)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_USER
+WorkingDirectory=/home/YOUR_USER/energy-chain
+ExecStart=/bin/bash scripts/run_trade_bot.sh
+Restart=always
+RestartSec=15
+Environment="HOME=/home/YOUR_USER"
+Environment="PATH=/home/YOUR_USER/.nvm/versions/node/v22.14.0/bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="RPC_URL=http://127.0.0.1:8575"
+StandardOutput=append:/var/log/energy-trade-bot.log
+StandardError=append:/var/log/energy-trade-bot.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
 ```
 
-- **Blockscout** (EVM 浏览器): http://localhost:3001 (后端 API: http://localhost:4000)
-- **Ping.pub** (Cosmos 浏览器): http://localhost:8080/energychain
+#### 2. 有功功率数据上链
+
+```bash
+sudo tee /etc/systemd/system/energy-data-uploader.service << 'EOF'
+[Unit]
+Description=EnergyChain Power Data Uploader (infinite loop)
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_USER
+WorkingDirectory=/home/YOUR_USER/energy-chain
+ExecStart=/bin/bash scripts/run_data_uploader.sh rawtx
+Restart=always
+RestartSec=15
+Environment="HOME=/home/YOUR_USER"
+Environment="PATH=/home/YOUR_USER/.nvm/versions/node/v22.14.0/bin:/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin"
+StandardOutput=append:/var/log/energy-data-uploader.log
+StandardError=append:/var/log/energy-data-uploader.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
+#### 3. 启用并启动
+
+```bash
+# 替换 YOUR_USER 和 Node.js 路径
+sudo sed -i "s/YOUR_USER/$USER/g" /etc/systemd/system/energy-trade-bot.service
+sudo sed -i "s/YOUR_USER/$USER/g" /etc/systemd/system/energy-data-uploader.service
+
+# 如果用 nvm, 找到 node 路径替换:
+NODE_BIN_DIR=$(dirname $(which node))
+sudo sed -i "s|/home/$USER/.nvm/versions/node/v22.14.0/bin|$NODE_BIN_DIR|g" \
+  /etc/systemd/system/energy-trade-bot.service \
+  /etc/systemd/system/energy-data-uploader.service
+
+sudo systemctl daemon-reload
+sudo systemctl enable energy-trade-bot energy-data-uploader
+sudo systemctl start energy-trade-bot energy-data-uploader
+```
+
+#### 4. 管理与监控
+
+```bash
+# 查看状态
+sudo systemctl status energy-trade-bot
+sudo systemctl status energy-data-uploader
+
+# 查看日志
+sudo journalctl -u energy-trade-bot -f
+sudo journalctl -u energy-data-uploader -f
+
+# 或查看文件日志
+tail -f /var/log/energy-trade-bot.log
+tail -f /var/log/energy-data-uploader.log
+
+# 重启
+sudo systemctl restart energy-trade-bot
+
+# 停止
+sudo systemctl stop energy-trade-bot energy-data-uploader
+```
+
+### 交易流保障架构
+
+```
+                     Ubuntu 服务器
+┌─────────────────────────────────────────────────────────┐
+│  systemd                                                │
+│  ├── energy-trade-bot.service (Restart=always)          │
+│  │     └── run_trade_bot.sh  (while true 守护)          │
+│  │           └── simulate_trades.ts (while(true) 交易)  │
+│  │                 崩溃 → 10s 后自动重启 ↩               │
+│  │                                                      │
+│  ├── energy-data-uploader.service (Restart=always)      │
+│  │     └── run_data_uploader.sh (while true 守护)       │
+│  │           └── batch_upload_loop.sh (while true 上链)  │
+│  │                 崩溃 → 10s 后自动重启 ↩               │
+│  │                                                      │
+│  服务器重启 → systemd 自动拉起所有 enable 的服务          │
+└─────────────────────────────────────────────────────────┘
+```
+
+三层保障:
+1. **内层循环**: 脚本自身 `while(true)` 无限循环，单笔失败 `try/catch` 或 `|| true` 跳过继续
+2. **外层守护**: `run_trade_bot.sh` / `run_data_uploader.sh` 捕获进程退出并在 10s 后重启
+3. **systemd**: 操作系统级别保障，`Restart=always` + `RestartSec=15`，服务器重启后也自动拉起
+
+---
+
+## 部署区块浏览器
+
+### Blockscout (EVM 浏览器)
+
+Blockscout 使用 Docker Compose 部署，包含以下服务:
+
+| 服务 | 镜像 | 说明 |
+|------|------|------|
+| blockscout-backend | `ghcr.io/blockscout/blockscout:latest` | Elixir API 后端 (v9.0.2) |
+| blockscout-frontend | `ghcr.io/blockscout/frontend:latest` | Next.js 前端 (v2.3.5) |
+| blockscout-proxy | `nginx:alpine` | Nginx 反向代理 (统一入口) |
+| stats | `ghcr.io/blockscout/stats:latest` | 图表统计微服务 |
+| blockscout-db | `postgres:16-alpine` | 主数据库 |
+| stats-db | `postgres:16-alpine` | 统计数据库 |
+| blockscout-redis | `redis:7-alpine` | 缓存 |
+| blockscout-verifier | `ghcr.io/blockscout/smart-contract-verifier:latest` | 合约验证 |
+
+```bash
+cd blockscout
+
+# 生产模式 (连接 fullnode EVM 8575/8576)
+EVM_HTTP_URL="http://host.docker.internal:8575" \
+EVM_WS_URL="ws://host.docker.internal:8576" \
+docker compose up -d
+
+# 单节点模式 (默认连接 8545/8546)
+docker compose up -d
+
+# 首次启动后 stats 服务可能需要重启
+# (等待后端索引完成后)
+docker compose restart stats
+```
+
+- 统一入口: http://localhost:3001
+- Stats API: http://localhost:8080
+- 后端 API (内部): http://localhost:4000
+
+> **重要**: 统一通过 3001 端口访问 Blockscout。Nginx 会自动将 `/api/*` 路由到后端，`/` 路由到前端。
+
+### Ping.pub (Cosmos 浏览器)
+
+```bash
+cd ping-explorer
+
+# 修改配置指向正确端口 (重要!)
+# 编辑 chains/mainnet/energychain.json:
+#   api address → http://localhost:1320  (生产) 或 http://localhost:1317  (单节点)
+#   rpc address → http://localhost:26687 (生产) 或 http://localhost:26657 (单节点)
+
+npm install
+npx vite build
+npx serve -s dist -l 5173
+```
+
+- 访问: http://localhost:5173/energychain
+
+---
+
+## MetaMask 连接
+
+在 MetaMask 中添加 EnergyChain 网络:
+
+| 设置项 | 值 |
+|------|------|
+| 网络名称 | EnergyChain |
+| RPC URL | `http://localhost:8575` (生产) 或 `http://localhost:8545` (单节点) |
+| Chain ID | `262144` |
+| 货币符号 | ECY |
+| 浏览器 URL | `http://localhost:3001` |
+
+### 导入测试钱包
+
+```bash
+# 导出私钥 (以 dev0 为例)
+energychaind keys unsafe-export-eth-key dev0 \
+  --keyring-backend test --home ~/.energychain-production/validator-0
+```
+
+在 MetaMask → 导入账户 → 粘贴私钥
+
+### 添加自定义 Token
+
+在 MetaMask → 导入 Token → 输入合约地址:
+
+```bash
+# 查看已部署的 Token 地址
+cat contracts/dex-deployment.json | jq '.contracts.TestUSDT'
+```
 
 ---
 
 ## 手动测试命令
 
-### 查询余额
-
-```bash
-# Cosmos 余额
-energychaind query bank balances $(energychaind keys show validator -a --keyring-backend test --home ~/.energychaind) \
-  --node http://127.0.0.1:26657
-
-# 查看所有钱包
-energychaind keys list --keyring-backend test --home ~/.energychaind
-
-# EVM 余额 (hex wei)
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"eth_getBalance","params":["0xYOUR_ADDRESS","latest"],"id":1}' | jq
-```
-
-### 查看链状态
+以下命令使用**生产模式 Fullnode 端口**。单节点模式将端口替换为 26657/1317/8545。
 
 ```bash
 # 最新区块高度
-curl -s http://127.0.0.1:26657/status | jq '.result.sync_info.latest_block_height'
-
-# 验证者集合
-curl -s http://127.0.0.1:1317/cosmos/staking/v1beta1/validators | jq '.validators[].description.moniker'
+curl -s http://127.0.0.1:26687/status | jq '.result.sync_info.latest_block_height'
 
 # EVM 区块号
-curl -s -X POST http://127.0.0.1:8545 \
+curl -s -X POST http://127.0.0.1:8575 \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' | jq
+  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
 
-# EVM chainId
-curl -s -X POST http://127.0.0.1:8545 \
+# EVM Chain ID
+curl -s -X POST http://127.0.0.1:8575 \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}' | jq
-```
+  -d '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}'
 
-### 钱包间转账测试
+# REST API 同步状态
+curl -s http://127.0.0.1:1320/cosmos/base/tendermint/v1beta1/syncing
 
-```bash
-# 从 test-user-1 转 1 ECY 给 test-user-2
-FROM=$(energychaind keys show test-user-1 -a --keyring-backend test --home ~/.energychaind)
-TO=$(energychaind keys show test-user-2 -a --keyring-backend test --home ~/.energychaind)
-energychaind tx bank send test-user-1 $TO 1000000000000000000uecy \
-  --fees 100000000000000uecy \
-  --keyring-backend test --home ~/.energychaind \
-  --chain-id energychain_9001-1 --node http://127.0.0.1:26657 -y
+# 验证者集合
+curl -s http://127.0.0.1:1320/cosmos/staking/v1beta1/validators | jq '.validators[].description.moniker'
 
-# EVM 转账 (使用 cast, 需要安装 foundry)
-cast send --rpc-url http://127.0.0.1:8545 \
-  --private-key YOUR_PRIVATE_KEY \
-  0xRECIPIENT --value 1ether
-```
+# Cosmos 余额查询
+energychaind query bank balance energy1_ADDRESS uecy --node tcp://127.0.0.1:26687
 
-### 查看合约部署结果
-
-```bash
-# 查看所有 DEX 合约地址
-cat contracts/dex-deployment.json | jq
-
-# 查看 EnergyDataAttestation 合约
-cat contracts/deployment.json | jq
-
-# 查看合约总存证数
-curl -s -X POST http://127.0.0.1:8545 \
+# EVM 余额查询
+curl -s -X POST http://127.0.0.1:8575 \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"eth_call","params":[{
-    "to":"'$(jq -r .contract contracts/deployment.json)'",
-    "data":"0x09d42de0"
-  },"latest"],"id":1}' | jq
+  -d '{"jsonrpc":"2.0","method":"eth_getBalance","params":["0xADDRESS","latest"],"id":1}'
+
+# 查看所有钱包
+energychaind keys list --keyring-backend test \
+  --home ~/.energychain-production/validator-0
+
+# 查看 DEX 合约地址
+cat contracts/dex-deployment.json
+
+# 检查所有 8 节点状态
+for port in 26657 26667 26677 26687 26697 26707 26717 26727; do
+  echo "Port $port: $(curl -s http://127.0.0.1:$port/status | jq -r '.result.node_info.moniker + " h=" + .result.sync_info.latest_block_height')"
+done
+
+# Blockscout 索引状态
+curl -s http://localhost:3001/api/v2/main-page/indexing-status | jq
+
+# Blockscout Token 列表
+curl -s http://localhost:3001/api/v2/tokens | jq '.items[].name'
+
+# Stats 服务健康检查
+curl -s http://localhost:8080/health
 ```
 
 ---
 
 ## 脚本总览
 
-| 脚本 | 说明 | 用法 |
-|------|------|------|
-| `chain/scripts/local_node.sh` | 单节点开发模式 | `bash chain/scripts/local_node.sh -y` |
-| `chain/scripts/deploy_production.sh` | 8 节点生产模式 | `bash chain/scripts/deploy_production.sh` |
-| `scripts/setup_wallets.sh` | 创建 6 个业务钱包并分配资金 | `bash scripts/setup_wallets.sh` |
-| `scripts/deploy_dex.sh` | 部署 DEX 合约 + 启动前端 | `bash scripts/deploy_dex.sh` |
-| `scripts/dex_full_setup.sh` | DEX 流动性 + 交易机器人 | `bash scripts/dex_full_setup.sh [all\|liquidity\|trade\|fund\|test]` |
-| `scripts/batch_upload_loop.sh` | 持续批量数据上链 | `bash scripts/batch_upload_loop.sh [contract\|rawtx]` |
-| `scripts/deploy_explorers.sh` | 部署 Blockscout + Ping.pub | `bash scripts/deploy_explorers.sh` |
-
-### 端口分配 (单节点模式)
-
-| 服务 | 端口 | 说明 |
-|------|------|------|
-| CometBFT RPC | 26657 | Cosmos RPC |
-| REST API | 1317 | Cosmos REST |
-| EVM JSON-RPC | 8545 | EVM HTTP |
-| EVM WebSocket | 8546 | EVM WS |
-| gRPC | 9090 | gRPC |
-| P2P | 26656 | P2P 通信 |
-| Blockscout API | 4000 | EVM 浏览器后端 |
-| Blockscout UI | 3001 | EVM 浏览器前端 |
-| Ping.pub | 8080 | Cosmos 浏览器 |
-| DEX Frontend | 3000 | DEX 前端 |
-
-### 端口分配 (生产多节点模式)
-
-| 节点 | P2P | RPC | EVM | REST | 角色 |
-|------|------|------|------|------|------|
-| Seed | 26656 | 26657 | - | - | 种子节点 |
-| Sentry-0 | 26666 | 26667 | 8555 | 1318 | 哨兵 (保护 Val-0,1) |
-| Sentry-1 | 26676 | 26677 | 8565 | 1319 | 哨兵 (保护 Val-2,3) |
-| Fullnode | 26686 | 26687 | 8575 | 1320 | 公共全节点 |
-| Val-0 | 26696 | 26697 | 8585 | 1321 | 验证者 |
-| Val-1 | 26706 | 26707 | 8595 | 1322 | 验证者 |
-| Val-2 | 26716 | 26717 | 8605 | 1323 | 验证者 |
-| Val-3 | 26726 | 26727 | 8615 | 1324 | 验证者 |
+| 脚本 | 说明 |
+|------|------|
+| `chain/scripts/local_node.sh -y` | 单节点开发模式 |
+| `chain/scripts/deploy_production.sh` | 8 节点生产模式 (seed+2sentry+fullnode+4val) |
+| `scripts/setup_wallets.sh` | 创建业务钱包 + 分配资金 |
+| `scripts/deploy_dex.sh` | DEX 合约部署 + 前端启动 |
+| `scripts/dex_full_setup.sh` | DEX 流动性 + 交易 (`all\|liquidity\|trade\|fund\|test`) |
+| `scripts/batch_upload_loop.sh` | 持续数据上链 (`contract\|rawtx`), 内层无限循环 |
+| `scripts/run_trade_bot.sh` | DEX 交易机器人守护脚本 (崩溃自动重启) |
+| `scripts/run_data_uploader.sh` | 数据上链守护脚本 (崩溃自动重启) |
+| `scripts/deploy_explorers.sh` | 部署 Blockscout + Ping.pub |
 
 ---
 
 ## 停止服务
 
+### Mac / 手动 nohup 模式
+
 ```bash
+# 停止链节点
+pkill -f 'energychaind start'
+
+# 停止 Blockscout (含所有微服务)
+cd blockscout && docker compose down
+
+# 停止 Ping.pub
+pkill -f 'serve.*ping-explorer' || lsof -ti:5173 | xargs kill -9
+
+# 停止 DEX 前端
+lsof -ti:3000 | xargs kill -9
+
+# 停止交易机器人 (包括守护脚本)
+pkill -f run_trade_bot
+pkill -f simulate_trades
+
+# 停止数据上链 (包括守护脚本)
+pkill -f run_data_uploader
+pkill -f batch_upload_loop
+pkill -f upload_evm_contract
+pkill -f upload_evm_rawtx
+```
+
+### Ubuntu systemd 模式
+
+```bash
+# 停止持续交易进程
+sudo systemctl stop energy-trade-bot energy-data-uploader
+
+# 禁止开机自启 (如不再需要)
+sudo systemctl disable energy-trade-bot energy-data-uploader
+
 # 停止链节点
 pkill -f 'energychaind start'
 
 # 停止 Blockscout
 cd blockscout && docker compose down
 
-# 停止 Ping.pub
-lsof -ti:8080 | xargs kill -9
-
-# 停止 DEX 前端
+# 停止 Ping.pub 和 DEX 前端
+pkill -f 'serve.*ping-explorer' || lsof -ti:5173 | xargs kill -9
 lsof -ti:3000 | xargs kill -9
-
-# 停止批量上链
-pkill -f batch_upload_loop
-pkill -f upload_evm_contract
-pkill -f upload_evm_rawtx
-
-# 停止交易机器人
-pkill -f simulate_trades
 ```
 
 ---
 
 ## 故障排除
 
+### EVM JSON-RPC 无法连接
+
+1. 确认 fullnode 进程在运行: `ps aux | grep energychaind | grep fullnode`
+2. 检查 EVM 日志: `grep -i "EVM\|JSON-RPC" ~/.energychain-production/logs/fullnode.log | tail -10`
+3. EVM 服务已内置**自动重启机制** (解耦于 CometBFT 共识), 如果崩溃会自动恢复 (指数退避 3s→30s)
+4. 确认使用正确端口: 生产模式 EVM=**8575**, 单节点模式 EVM=8545
+
+### gRPC 端口冲突导致 API/EVM 全部不可用
+
+如果 CometBFT RPC 正常 (26687) 但 REST API (1320) 和 EVM (8575) 无法访问, 很可能是 **gRPC 端口冲突**。
+部署脚本已修复此问题 (正确匹配 `localhost:9090` 默认地址), 但如果手动配置, 确保每个节点的 gRPC 端口不同。
+
 ### 节点启动失败: "database lock"
 
 ```bash
 pkill -9 -f energychaind
 sleep 3
-find ~/.energychaind/data -name "LOCK" -delete
-# 或生产模式:
 find ~/.energychain-production/*/data -name "LOCK" -delete
 ```
 
-### Blockscout 容器重启
+### Blockscout 无法连接链
 
 ```bash
-docker logs blockscout-backend   # 查看后端错误
-docker logs blockscout-frontend  # 查看前端错误
-cd blockscout && docker compose down && docker compose up -d
+# 确认 EVM RPC 端口 (必须是 host.docker.internal)
+docker logs blockscout-backend 2>&1 | grep "ETHEREUM_JSONRPC"
+
+# 重启并指定正确端口
+cd blockscout
+docker compose down
+EVM_HTTP_URL="http://host.docker.internal:8575" \
+EVM_WS_URL="ws://host.docker.internal:8576" \
+docker compose up -d
 ```
+
+### Blockscout 索引卡在 0 块
+
+Cosmos EVM 的创世块是 block 1 (不是 block 0)。确保 `blockscout-backend` 环境变量中设置了:
+
+```yaml
+FIRST_BLOCK: "1"
+```
+
+### Blockscout 图表显示 "No data"
+
+Stats 微服务可能在后端数据库就绪之前启动，导致初始聚合失败:
+
+```bash
+# 等待后端索引完成后重启 stats 服务
+docker compose restart stats
+
+# 验证 stats API 是否有数据
+curl -s http://localhost:8080/api/v1/counters | jq '.counters[] | {id, value}'
+```
+
+如果 CORS 预检失败 (浏览器控制台出现跨域错误)，检查 nginx 配置中是否正确处理了 OPTIONS 请求 (应返回 204)。
+
+### Blockscout Tokens 页面 500 错误
+
+1. 确认使用 GHCR 的后端镜像 (`ghcr.io/blockscout/blockscout:latest`)，而不是 Docker Hub 的 (`blockscout/blockscout:latest`)。两者版本差异很大。
+2. 确认前后端版本匹配。推荐同时使用 `latest` tag。
+3. 确认 nginx 代理正确路由 `/api/*` 到后端。
 
 ### Ping.pub 无数据
 
 ```bash
-# 1. 确认 API 可访问
-curl -s http://127.0.0.1:1317/cosmos/staking/v1beta1/validators | jq
+# 确认 REST API 可访问
+curl -s http://127.0.0.1:1320/cosmos/staking/v1beta1/validators | jq
 
-# 2. 检查链配置文件端口
-cat ping-explorer/chains/mainnet/energychain.json | jq
+# 检查配置文件端口
+cat ping-explorer/chains/mainnet/energychain.json
 
-# 3. 重新构建
-cd ping-explorer && rm -rf dist && npm run build
-cd dist && npx serve -s -l 8080 &
-
-# 4. 浏览器硬刷新 (清缓存)
-# Mac: Cmd+Shift+R   Linux: Ctrl+Shift+R
+# 重新构建
+cd ping-explorer && rm -rf dist && npx vite build && npx serve -s dist -l 5173
 ```
 
-### 批量上链报错
+### DEX 前端余额/池子显示为 0
+
+1. 确认 `.env` 中的合约地址与 `contracts/dex-deployment.json` 一致
+2. 确认 `VITE_RPC_URL` 指向正确的 EVM 端口 (生产模式=8575)
+3. 修改 `.env` 后需要重新 `npm run build`
+4. 确认交易模拟脚本在运行: `ps aux | grep simulate_trades`
+
+### 区块交易中断 / 无新交易
+
+交易依赖两个持续运行的后台进程。如果交易中断:
 
 ```bash
-# 检查 xlsx 文件是否存在
-ls -la docs/有功功率数据.xlsx
+# 1. 检查进程是否在运行
+ps aux | grep -E 'run_trade_bot|simulate_trades' | grep -v grep
+ps aux | grep -E 'run_data_uploader|batch_upload' | grep -v grep
 
-# 检查合约是否部署
-cat contracts/deployment.json | jq
+# 2. Ubuntu systemd 模式检查
+sudo systemctl status energy-trade-bot
+sudo systemctl status energy-data-uploader
 
-# 手动测试 EVM RPC
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
+# 3. 查看日志定位崩溃原因
+tail -50 /var/log/energy-trade-bot.log     # systemd 模式
+tail -50 /tmp/trades.log                    # nohup 模式
 
-# 检查钱包余额是否足够 gas
-energychaind query bank balances $(energychaind keys show data-submitter -a --keyring-backend test --home ~/.energychaind) \
-  --node http://127.0.0.1:26657
+# 4. 常见原因:
+#    - RPC 端口不对 (应为 8575, 不是 8545)
+#    - dev0 私钥未导出或不匹配
+#    - 合约地址变更但脚本读取了旧的 dex-deployment.json
+#    - Node.js 或 npx 不在 PATH 中 (systemd 环境变量问题)
+
+# 5. 手动快速恢复
+export PRIVATE_KEY=$(energychaind keys unsafe-export-eth-key dev0 \
+  --keyring-backend test --home ~/.energychain-production/validator-0)
+export RPC_URL="http://127.0.0.1:8575"
+nohup bash scripts/run_trade_bot.sh > /tmp/trades.log 2>&1 &
+nohup bash scripts/run_data_uploader.sh rawtx > /tmp/batch_upload.log 2>&1 &
 ```
 
-### macOS sed 不兼容
+### macOS vs Linux sed 差异
 
-脚本已内置 `sedi()` 函数自动检测 macOS/Linux 并使用正确的 `sed -i` 语法。
+部署脚本已内置 `sedi()` 函数自动兼容两种系统。
 
 ### 端口已占用
 
 ```bash
-lsof -nP -iTCP:PORT -sTCP:LISTEN  # 查看占用进程
-kill -9 PID                        # 终止进程
+lsof -nP -iTCP:PORT -sTCP:LISTEN
+kill -9 PID
 ```
 
 ---
@@ -748,38 +982,37 @@ kill -9 PID                        # 终止进程
 
 ```
 energy-chain/
-├── chain/                       # 链源码
-│   ├── cmd/energychaind/        # 链二进制入口
-│   ├── scripts/
-│   │   ├── local_node.sh        # 单节点开发脚本
-│   │   └── deploy_production.sh # 多节点生产脚本
-│   └── x/                       # 自定义模块 (energy, audit, identity, oracle)
+├── chain/                       # 链源码 (Cosmos SDK + EVM)
+│   ├── cmd/energychaind/cmd/
+│   │   ├── root.go              # CLI 入口
+│   │   └── evm_server.go        # EVM 服务隔离 (防止 JSON-RPC 崩溃)
+│   └── scripts/
+│       ├── local_node.sh        # 单节点开发
+│       └── deploy_production.sh # 多节点生产
 ├── contracts/                   # Solidity 合约
-│   ├── contracts/dex/           # UniswapV2 DEX 合约
+│   ├── contracts/dex/           # UniswapV2 DEX
 │   ├── contracts/utils/         # ERC20TokenFactory, Multicall3
-│   ├── scripts/
-│   │   ├── deploy.ts            # EnergyDataAttestation 部署
-│   │   ├── deploy_dex.ts        # DEX 全套合约部署 (含 TestUSDT)
-│   │   ├── add_liquidity.ts     # 添加 USDT/ECY 流动性
-│   │   ├── simulate_trades.ts   # 自动交易机器人 (无限循环)
-│   │   ├── fund_dev0.ts         # 给测试账户分配资金
-│   │   └── test_all_dex.ts      # 10 项完整 DEX 测试
-│   ├── deployment.json          # EnergyDataAttestation 合约地址
+│   ├── scripts/                 # 部署/测试脚本
+│   ├── deployment.json          # EnergyDataAttestation 地址
 │   └── dex-deployment.json      # DEX 合约地址
 ├── dex-frontend/                # DEX 前端 (React/Vite/wagmi)
+│   ├── .env.example             # 环境变量模板
+│   ├── .env                     # 本地环境变量 (不提交)
+│   └── src/config/              # 配置 (从环境变量读取)
 ├── ping-explorer/               # Ping.pub Cosmos 浏览器
-├── blockscout/                  # Blockscout Docker Compose
-│   └── docker-compose.yml
-├── docs/
-│   └── 有功功率数据.xlsx          # 电表有功功率原始数据
-├── scripts/
-│   ├── setup_wallets.sh         # 创建业务钱包 + 分配资金
-│   ├── deploy_dex.sh            # DEX 一键部署
-│   ├── dex_full_setup.sh        # DEX 流动性 + 交易机器人
-│   ├── batch_upload_loop.sh     # 持续批量数据上链 (无限循环)
-│   ├── deploy_explorers.sh      # 浏览器部署
-│   ├── parse_xlsx.js            # xlsx 数据解析
-│   ├── upload_evm_contract.js   # EVM 合约存证 (单次)
-│   └── upload_evm_rawtx.js      # EVM 原始交易存证 (单次)
-└── DEPLOYMENT.md                # 本文档
+├── blockscout/                  # Blockscout Docker 配置
+│   ├── docker-compose.yml       # 完整服务编排 (8 个容器)
+│   └── proxy/                   # Nginx 配置模板
+├── docs/有功功率数据.xlsx         # 电表数据
+├── scripts/                     # 部署运维脚本
+│   ├── setup_wallets.sh
+│   ├── deploy_dex.sh
+│   ├── dex_full_setup.sh
+│   ├── batch_upload_loop.sh    # 有功功率数据上链 (内层无限循环)
+│   ├── run_data_uploader.sh    # 数据上链守护 (外层, 崩溃自动重启)
+│   ├── run_trade_bot.sh        # DEX 交易机器人守护 (外层, 崩溃自动重启)
+│   ├── deploy_explorers.sh
+│   ├── upload_evm_contract.js
+│   └── upload_evm_rawtx.js
+└── DEPLOYMENT.md
 ```

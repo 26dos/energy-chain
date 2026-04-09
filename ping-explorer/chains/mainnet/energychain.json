@@ -1,10 +1,10 @@
 {
   "chain_name": "energychain",
   "api": [
-    { "provider": "local", "address": "http://localhost:1317" }
+    { "provider": "local", "address": "http://localhost:1320" }
   ],
   "rpc": [
-    { "provider": "local", "address": "http://localhost:26657" }
+    { "provider": "local", "address": "http://localhost:26687" }
   ],
   "sdk_version": "0.54.0",
   "coin_type": "60",

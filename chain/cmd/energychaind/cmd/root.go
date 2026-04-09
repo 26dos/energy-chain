@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	cmtcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
 	cmtcfg "github.com/cometbft/cometbft/config"
 	cmtcli "github.com/cometbft/cometbft/libs/cli"
 
@@ -34,6 +35,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/client"
 	clientcfg "github.com/cosmos/cosmos-sdk/client/config"
 	"github.com/cosmos/cosmos-sdk/client/flags"
+	sdkversion "github.com/cosmos/cosmos-sdk/version"
 	"github.com/cosmos/cosmos-sdk/client/pruning"
 	"github.com/cosmos/cosmos-sdk/client/rpc"
 	"github.com/cosmos/cosmos-sdk/client/snapshot"
@@ -177,12 +179,34 @@ func initRootCmd(rootCmd *cobra.Command, evmApp *evmd.EVMD) {
 		snapshot.Cmd(sdkAppCreator),
 	)
 
-	// add Cosmos EVM' flavored TM commands to start server, etc.
-	cosmosevmserver.AddCommands(
-		rootCmd,
-		cosmosevmserver.NewDefaultStartOptions(newApp, defaultNodeHome),
-		appExport,
-		addModuleInitFlags,
+	// Custom start command that decouples EVM services (JSON-RPC + indexer)
+	// from the main errgroup to prevent cascading failures during blocksync.
+	startOpts := cosmosevmserver.NewDefaultStartOptions(newApp, defaultNodeHome)
+	startCmd := CustomStartCmd(startOpts)
+	addModuleInitFlags(startCmd)
+
+	cometbftCmd := &cobra.Command{
+		Use:     "comet",
+		Aliases: []string{"cometbft"},
+		Short:   "CometBFT subcommands",
+	}
+	cometbftCmd.AddCommand(
+		sdkserver.ShowNodeIDCmd(),
+		sdkserver.ShowValidatorCmd(),
+		sdkserver.ShowAddressCmd(),
+		sdkserver.VersionCmd(),
+		cmtcmd.ResetAllCmd,
+		cmtcmd.ResetStateCmd,
+		sdkserver.BootstrapStateCmd(sdkAppCreator),
+	)
+
+	rootCmd.AddCommand(
+		startCmd,
+		cometbftCmd,
+		sdkserver.ExportCmd(appExport, defaultNodeHome),
+		sdkversion.NewVersionCommand(),
+		sdkserver.NewRollbackCmd(sdkAppCreator, defaultNodeHome),
+		cosmosevmserver.NewIndexTxCmd(),
 	)
 
 	// add Cosmos EVM key commands

@@ -1,3 +1,5 @@
+import { CONTRACTS } from "./contracts";
+
 export interface Token {
   address: string;
   name: string;
@@ -16,24 +18,22 @@ export const NATIVE_ECY: Token = {
 };
 
 export const WECY_TOKEN: Token = {
-  address: "0x6a407DD067d79659F58a4887Fb7ec188207Fc1A6",
+  address: CONTRACTS.WECY,
   name: "Wrapped ECY",
   symbol: "WECY",
   decimals: 18,
 };
 
 export const USDT_TOKEN: Token = {
-  address: "0x5633fDb95cA11376CE9f8eBF05104Fe6fa60E3fF",
+  address:
+    import.meta.env.VITE_USDT ||
+    "0xa626fa9678Ca32372cCd7fE5d45088B858a041b2",
   name: "Test USDT",
   symbol: "USDT",
   decimals: 18,
 };
 
-export const DEFAULT_TOKENS: Token[] = [
-  NATIVE_ECY,
-  WECY_TOKEN,
-  USDT_TOKEN,
-];
+export const DEFAULT_TOKENS: Token[] = [NATIVE_ECY, WECY_TOKEN, USDT_TOKEN];
 
 export const TOKENS = DEFAULT_TOKENS;
 export const NATIVE_TOKEN = NATIVE_ECY;

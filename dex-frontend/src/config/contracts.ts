@@ -1,24 +1,31 @@
-export const CHAIN_ID = 262144;
+const env = import.meta.env;
+
+export const CHAIN_ID = Number(env.VITE_CHAIN_ID || "262144");
 
 export const CHAIN_CONFIG = {
   id: CHAIN_ID,
-  name: "EnergyChain",
+  name: env.VITE_CHAIN_NAME || "EnergyChain",
   nativeCurrency: { name: "ECY", symbol: "ECY", decimals: 18 },
   rpcUrls: {
-    default: { http: ["http://127.0.0.1:8545"] },
-    public: { http: ["http://127.0.0.1:8545"] },
+    default: { http: [env.VITE_RPC_URL || "http://127.0.0.1:8575"] },
+    public: { http: [env.VITE_RPC_URL || "http://127.0.0.1:8575"] },
   },
   blockExplorers: {
-    default: { name: "Blockscout", url: "http://localhost:4000" },
+    default: {
+      name: "Blockscout",
+      url: env.VITE_BLOCKSCOUT_URL || "http://localhost:3001",
+    },
   },
 } as const;
 
 export const CONTRACTS = {
-  WECY: "0x87613B1B8FD2a3C9e305F05c9c0172D5656452da",
-  Factory: "0xCE808a193B7C9338b0Bb4e125B4E14B8142A8dE7",
-  Router: "0xbc6A106193cDa5292C7F95f1eBede72e3e5c8c02",
-  Multicall3: "0x78C4Cf1b3635fFB121aAc6A03fca306C6cfeB197",
-  TokenFactory: "0x70797AEFc03Dc8ecCd7e4dCbFEE8980FFB64C026",
+  WECY: env.VITE_WECY || "0x8EE1ddb8E5082C75998c510fa50ec4286d7d926A",
+  Factory: env.VITE_FACTORY || "0x51E3D92f10cf07bA07EF2da63EE406D74D59f22d",
+  Router: env.VITE_ROUTER || "0x6e8d5D2B337730888F414Eb19210eeDB26DC392f",
+  Multicall3:
+    env.VITE_MULTICALL3 || "0x97D9f6Bb4Df64e09A0a8f74e04c0f8e9c81eDD2B",
+  TokenFactory:
+    env.VITE_TOKEN_FACTORY || "0xc0C0a018dff7E979BF363b13e97a87bB9266269D",
 };
 
 export const DEFAULT_SLIPPAGE = 0.5;
