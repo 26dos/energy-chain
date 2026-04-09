@@ -71,7 +71,7 @@ if [ -d "$HOME/.energychain-production/validator-0" ]; then
   echo "  Funding dev0 with 50,000 ECY from $FUNDER..."
   energychaind tx bank send "$FUNDER" "$DEV0_ADDR" \
     "50000000000000000000000uecy" \
-    --fees "100000000000000uecy" \
+    --fees "500000000000000000uecy" \
     --keyring-backend test \
     --home "${KEY_HOME}" \
     --chain-id "$CHAIN_ID" \

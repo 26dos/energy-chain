@@ -11,7 +11,7 @@ CHAIN_ID="energychain_9001-1"
 DENOM="uecy"
 KEYRING="test"
 KEYALGO="eth_secp256k1"
-FEES="100000000000000uecy"
+FEES="500000000000000000uecy"
 
 # Detect chain home
 if [ -d "$HOME/.energychain-production/validator-0" ]; then
