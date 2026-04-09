@@ -46,7 +46,17 @@ async function main() {
   const provider = new ethers.JsonRpcProvider(RPC_URL);
   const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
   const network = await provider.getNetwork();
-  console.log(`[2/4] 连接链 chainId=${network.chainId}  wallet=${wallet.address}\n`);
+  console.log(`[2/4] 连接链 chainId=${network.chainId}  wallet=${wallet.address}`);
+
+  const balance = await provider.getBalance(wallet.address);
+  console.log(`     余额: ${ethers.formatEther(balance)} ECY`);
+  if (balance === 0n) {
+    console.log("  ERROR: 钱包余额为 0, 无法支付 gas。请先给钱包转入 ECY。");
+    process.exit(1);
+  }
+
+  const feeData = await provider.getFeeData();
+  console.log(`     gasPrice: ${ethers.formatUnits(feeData.gasPrice || 0n, "gwei")} Gwei\n`);
 
   console.log("[3/4] 开始上链 (顺序提交, 不等确认) ...");
   const startTime = Date.now();
@@ -66,19 +76,26 @@ async function main() {
           data: calldata,
           nonce,
           gasLimit: GAS_LIMIT,
+          gasPrice: feeData.gasPrice || ethers.parseUnits("20", "gwei"),
         });
         lastTxHash = tx.hash;
         nonce++;
         successCount++;
         break;
-      } catch {
+      } catch (err) {
         if (attempt < 2) {
+          if (i === 0 && attempt === 0) {
+            console.log(`\n  首笔交易失败: ${err.message?.slice(0, 120)}`);
+          }
           await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
           nonce = await provider.getTransactionCount(
             wallet.address,
             "pending",
           );
         } else {
+          if (failCount === 0) {
+            console.log(`\n  错误详情: ${err.message?.slice(0, 150)}`);
+          }
           failCount++;
           nonce++;
         }
