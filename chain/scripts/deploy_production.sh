@@ -129,9 +129,9 @@ for i in $(seq 0 $((NUM_VALIDATORS - 1))); do
   echo "  validator-${i}: 100M ECY"
 done
 
-$BINARY genesis add-genesis-account "$DEV0_ADDR" "1000000000000000000000${DENOM}" \
+$BINARY genesis add-genesis-account "$DEV0_ADDR" "100000000000000000000000${DENOM}" \
   --home "$NODE0_HOME" --keyring-backend "$KEYRING"
-echo "  dev0: 1000 ECY"
+echo "  dev0: 100,000 ECY"
 
 # ====== 第 5 步: 生成 gentx (带 gas-prices) ======
 echo ""
