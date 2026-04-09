@@ -397,6 +397,11 @@ else
 fi
 
 echo ""
+echo "  ── EVM RPC 节点 ──"
+echo "  生产多节点的 EVM JSON-RPC 存在框架级 bug，需要独立 EVM 节点提供服务:"
+echo "    bash chain/scripts/start_evm_node.sh -y"
+echo "  启动后 EVM RPC: http://127.0.0.1:8545  REST API: http://127.0.0.1:1317"
+echo ""
 echo "  Stop all:  pkill -f 'energychaind start'"
 echo "  View logs: tail -f ${LOG_DIR}/fullnode.log"
 echo "=============================================="

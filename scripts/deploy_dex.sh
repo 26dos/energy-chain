@@ -4,15 +4,21 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 # Detect chain home and EVM RPC port
-if [ -d "$HOME/.energychain-production/validator-0" ]; then
-  BASE_HOME="$HOME/.energychain-production"
-  KEY_HOME="${BASE_HOME}/validator-0"
+# Priority: evmnode > energychaind (single) > production
+if [ -d "$HOME/.energychain-evmnode" ]; then
+  KEY_HOME="$HOME/.energychain-evmnode"
+elif [ -d "$HOME/.energychaind" ]; then
+  KEY_HOME="$HOME/.energychaind"
+elif [ -d "$HOME/.energychain-production/validator-0" ]; then
+  KEY_HOME="$HOME/.energychain-production/validator-0"
 else
-  BASE_HOME="$HOME/.energychaind"
-  KEY_HOME="$BASE_HOME"
+  echo "ERROR: No chain data found"; exit 1
 fi
 
-if curl -s -o /dev/null http://127.0.0.1:8575 2>/dev/null; then
+# Detect EVM RPC (try 8545 first since production EVM is usually broken)
+if curl -s -o /dev/null http://127.0.0.1:8545 2>/dev/null; then
+  EVM_RPC="http://127.0.0.1:8545"
+elif curl -s -o /dev/null http://127.0.0.1:8575 2>/dev/null; then
   EVM_RPC="http://127.0.0.1:8575"
 else
   EVM_RPC="http://127.0.0.1:8545"
