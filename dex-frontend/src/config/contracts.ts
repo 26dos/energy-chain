@@ -13,14 +13,13 @@ export const CHAIN_CONFIG = {
   },
 } as const;
 
-// Addresses from dex-deployment.json
 export const CONTRACTS = {
-  WECY: "0x6a407DD067d79659F58a4887Fb7ec188207Fc1A6",
-  Factory: "0xfd9C87D909c6b0C8Ef412a185e78722E282d67d4",
-  Router: "0xd537D06b2b03E067f0c6FBe6252Fdd280B8b11d7",
-  Multicall3: "0xD90d37FE6629233a5BA781AA6B7C309EAcf7c252",
-  TokenFactory: "0x86d2db5d33b863d75D3A0bC839c5E2795B0Ad46e",
+  WECY: "0x87613B1B8FD2a3C9e305F05c9c0172D5656452da",
+  Factory: "0xCE808a193B7C9338b0Bb4e125B4E14B8142A8dE7",
+  Router: "0xbc6A106193cDa5292C7F95f1eBede72e3e5c8c02",
+  Multicall3: "0x78C4Cf1b3635fFB121aAc6A03fca306C6cfeB197",
+  TokenFactory: "0x70797AEFc03Dc8ecCd7e4dCbFEE8980FFB64C026",
 };
 
-export const DEFAULT_SLIPPAGE = 0.5; // 0.5%
-export const DEFAULT_DEADLINE = 20; // 20 minutes
+export const DEFAULT_SLIPPAGE = 0.5;
+export const DEFAULT_DEADLINE = 20;

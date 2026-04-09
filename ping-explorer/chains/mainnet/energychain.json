@@ -8,9 +8,10 @@
   ],
   "sdk_version": "0.54.0",
   "coin_type": "60",
-  "min_tx_fee": "0",
-  "addr_prefix": "cosmos",
+  "min_tx_fee": "10000000000",
+  "addr_prefix": "energy",
   "logo": "/energychain-logo.svg",
+  "theme_color": "#00b894",
   "assets": [
     {
       "base": "uecy",
@@ -19,7 +20,5 @@
       "coingecko_id": "",
       "logo": "/energychain-logo.svg"
     }
-  ],
-  "ping_rpc": "http://localhost:26657",
-  "ping_rest": "http://localhost:1317"
+  ]
 }
