@@ -95,6 +95,21 @@ export function ChartsPage() {
         toBlock: latestBlock,
       });
 
+      const blockTimestampCache = new Map<bigint, number>();
+      const uniqueBlocks = [...new Set(logs.map((l) => l.blockNumber!))];
+      const BATCH = 20;
+      for (let i = 0; i < uniqueBlocks.length; i += BATCH) {
+        const batch = uniqueBlocks.slice(i, i + BATCH);
+        const results = await Promise.allSettled(
+          batch.map((bn) => publicClient.getBlock({ blockNumber: bn }))
+        );
+        results.forEach((r, idx) => {
+          if (r.status === "fulfilled") {
+            blockTimestampCache.set(batch[idx]!, Number(r.value.timestamp));
+          }
+        });
+      }
+
       const tradeRecords: TradeRecord[] = [];
       for (const log of logs) {
         const { amount0In, amount1In, amount0Out, amount1Out } = log.args as any;
@@ -134,12 +149,7 @@ export function ChartsPage() {
           }
         }
 
-        let timestamp = Math.floor(Date.now() / 1000);
-        try {
-          const block = await publicClient.getBlock({ blockNumber: log.blockNumber! });
-          timestamp = Number(block.timestamp);
-        } catch {}
-
+        const timestamp = blockTimestampCache.get(log.blockNumber!) ?? Math.floor(Date.now() / 1000);
         const d = new Date(timestamp * 1000);
         const timeStr = d.toLocaleTimeString("en-US", { hour12: false, hour: "2-digit", minute: "2-digit" });
 
