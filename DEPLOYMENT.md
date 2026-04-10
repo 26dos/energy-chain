@@ -17,6 +17,7 @@
 - [MetaMask 连接](#metamask-连接)
 - [持续交易保障](#持续交易保障)
 - [手动测试命令](#手动测试命令)
+- [多机部署 (新增验证者)](#多机部署-新增验证者)
 - [脚本总览](#脚本总览)
 - [停止服务](#停止服务)
 - [故障排除](#故障排除)
@@ -797,6 +798,32 @@ curl -s http://localhost:8080/health
 | `scripts/run_trade_bot.sh` | DEX 交易机器人守护脚本 (崩溃自动重启) |
 | `scripts/run_data_uploader.sh` | 数据上链守护脚本 (崩溃自动重启) |
 | `scripts/deploy_explorers.sh` | 部署 Blockscout + Ping.pub |
+| `scripts/deploy_remote_validators.sh` | 在新机器上部署远程验证者节点 |
+
+---
+
+## 多机部署 (新增验证者)
+
+如需在另一台机器上新增验证者节点并加入已有网络，请参考详细文档:
+
+**[docs/MULTI_MACHINE_DEPLOY.md](docs/MULTI_MACHINE_DEPLOY.md)**
+
+快速步骤:
+
+1. 在 Ubuntu 上获取 seed 节点 ID 和 genesis.json
+2. 将 genesis.json 拷贝到新机器
+3. 在新机器上运行部署脚本:
+
+```bash
+bash scripts/deploy_remote_validators.sh \
+    --seed-id "<seed-node-id>" \
+    --seed-ip "192.168.31.71" \
+    --genesis ~/genesis.json
+```
+
+4. 等待区块同步完成
+5. 从 Ubuntu 向新验证者转账
+6. 在新机器上提交 `create-validator` 交易
 
 ---
 
