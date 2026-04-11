@@ -259,7 +259,10 @@ sedi '/^\[api\]$/,/^\[/ s|enable = false|enable = true|' "$FN_APP"
 sedi "s|enabled-unsafe-cors = false|enabled-unsafe-cors = true|" "$FN_APP"
 sedi '/^\[json-rpc\]$/,/^\[/ s|enable = false|enable = true|' "$FN_APP"
 sedi 's|enable-indexer = false|enable-indexer = true|' "$FN_APP"
-echo "  fullnode: P2P=26686 RPC=26687 EVM=8575"
+# State Sync 快照: 每 1000 块生成一次, 保留最近 2 个, 供新节点快速同步
+sedi 's|snapshot-interval = 0|snapshot-interval = 1000|' "$FN_APP"
+sedi 's|snapshot-keep-recent = 2|snapshot-keep-recent = 2|' "$FN_APP"
+echo "  fullnode: P2P=26686 RPC=26687 EVM=8575 (snapshot-interval=1000)"
 
 # --- 4 个 Validators ---
 #   validator-0: P2P=26696  -> sentry-0
